@@ -1,7 +1,10 @@
 
 from collections import Counter, OrderedDict
 
+import pytest
+
 from src.grade_analytics.collections_utils import (
+    RollingAverage,
     count_grade_categories,
     create_ordered_grade_report,
     group_students_by_major,
@@ -53,3 +56,23 @@ def test_create_ordered_grade_report():
     assert isinstance(report, OrderedDict)
     assert list(report.keys()) == ["A", "B", "C", "D", "F"]
     assert list(report.values()) == [3, 2, 1, 0, 0]
+
+
+def test_rolling_average_uses_recent_scores():
+    rolling = RollingAverage(window_size=3)
+
+    assert rolling.add_score(70) == 70
+    assert rolling.add_score(80) == 75
+    assert rolling.add_score(90) == 80
+    assert rolling.add_score(100) == 90
+
+
+def test_rolling_average_empty():
+    rolling = RollingAverage(window_size=3)
+
+    assert rolling.current_average() is None
+
+
+def test_rolling_average_rejects_zero_window():
+    with pytest.raises(ValueError):
+        RollingAverage(window_size=0)

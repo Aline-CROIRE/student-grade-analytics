@@ -1,5 +1,5 @@
 
-from collections import Counter, OrderedDict, defaultdict
+from collections import Counter, OrderedDict, defaultdict, deque
 from typing import DefaultDict
 
 from src.grade_analytics.models import Student
@@ -45,3 +45,25 @@ def create_ordered_grade_report(
         (grade, distribution.get(grade, 0))
         for grade in grade_order
     )
+
+
+class RollingAverage:
+    """Calculate averages over the most recent scores."""
+
+    def __init__(self, window_size: int) -> None:
+        if window_size <= 0:
+            raise ValueError("Window size must be greater than zero.")
+
+        self._scores: deque[float] = deque(maxlen=window_size)
+
+    def add_score(self, score: float) -> float:
+        """Add a score and return the current rolling average."""
+        self._scores.append(score)
+        return sum(self._scores) / len(self._scores)
+
+    def current_average(self) -> float | None:
+        """Return the current average, or None if there are no scores."""
+        if not self._scores:
+            return None
+
+        return sum(self._scores) / len(self._scores)
