@@ -1,8 +1,22 @@
 
-from collections import Counter, OrderedDict, defaultdict, deque
-from typing import DefaultDict
+from collections import Counter, OrderedDict, defaultdict, deque, namedtuple
+from typing import DefaultDict, TypedDict
 
 from src.grade_analytics.models import Student
+
+
+GradeSummary = namedtuple(
+    "GradeSummary",
+    ["student_id", "average_score", "grade_count"],
+)
+
+
+class GradeReport(TypedDict):
+    """Define the structure of a grade report."""
+
+    student_id: str
+    average_score: float
+    grade_count: int
 
 
 def count_grade_categories(
@@ -67,3 +81,31 @@ class RollingAverage:
             return None
 
         return sum(self._scores) / len(self._scores)
+
+
+def create_grade_summary(
+    student_id: str,
+    scores: list[float],
+) -> GradeSummary:
+    """Create a compact summary using a namedtuple."""
+    average = sum(scores) / len(scores) if scores else 0.0
+
+    return GradeSummary(
+        student_id=student_id,
+        average_score=average,
+        grade_count=len(scores),
+    )
+
+
+def create_grade_report(
+    student_id: str,
+    scores: list[float],
+) -> GradeReport:
+    """Create a dictionary report with a defined structure."""
+    average = sum(scores) / len(scores) if scores else 0.0
+
+    return {
+        "student_id": student_id,
+        "average_score": average,
+        "grade_count": len(scores),
+    }

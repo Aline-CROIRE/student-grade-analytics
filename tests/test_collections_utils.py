@@ -6,6 +6,8 @@ import pytest
 from src.grade_analytics.collections_utils import (
     RollingAverage,
     count_grade_categories,
+    create_grade_report,
+    create_grade_summary,
     create_ordered_grade_report,
     group_students_by_major,
     group_students_by_year,
@@ -76,3 +78,28 @@ def test_rolling_average_empty():
 def test_rolling_average_rejects_zero_window():
     with pytest.raises(ValueError):
         RollingAverage(window_size=0)
+
+
+def test_create_grade_summary():
+    summary = create_grade_summary("S001", [70, 80, 90])
+
+    assert summary.student_id == "S001"
+    assert summary.average_score == 80
+    assert summary.grade_count == 3
+
+
+def test_create_grade_report():
+    report = create_grade_report("S001", [70, 80, 90])
+
+    assert report == {
+        "student_id": "S001",
+        "average_score": 80,
+        "grade_count": 3,
+    }
+
+
+def test_empty_grade_summary():
+    summary = create_grade_summary("S001", [])
+
+    assert summary.average_score == 0.0
+    assert summary.grade_count == 0
