@@ -1,9 +1,15 @@
 
-
-from collections import Counter, defaultdict
+from collections import Counter, OrderedDict, defaultdict
 from typing import DefaultDict
 
 from src.grade_analytics.models import Student
+
+
+def count_grade_categories(
+    categories: list[str],
+) -> Counter[str]:
+    """Count how many times each grade category occurs."""
+    return Counter(categories)
 
 
 def group_students_by_major(
@@ -29,8 +35,13 @@ def group_students_by_year(
 
     return groups
 
-def count_grade_categories(
-    categories: list[str],
-) -> Counter[str]:
-    """Count how many times each grade category occurs."""
-    return Counter(categories)
+
+def create_ordered_grade_report(
+    distribution: Counter[str],
+    grade_order: list[str],
+) -> OrderedDict[str, int]:
+    """Create a grade report following the requested grade order."""
+    return OrderedDict(
+        (grade, distribution.get(grade, 0))
+        for grade in grade_order
+    )

@@ -1,6 +1,13 @@
-from collections import Counter
 
-from src.grade_analytics.collections_utils import count_grade_categories
+from collections import Counter, OrderedDict
+
+from src.grade_analytics.collections_utils import (
+    count_grade_categories,
+    create_ordered_grade_report,
+    group_students_by_major,
+    group_students_by_year,
+)
+from src.grade_analytics.models import Student
 
 
 def test_count_grade_categories():
@@ -11,13 +18,6 @@ def test_count_grade_categories():
 
 def test_count_empty_categories():
     assert count_grade_categories([]) == Counter()
-
-
-from src.grade_analytics.collections_utils import (
-    group_students_by_major,
-    group_students_by_year,
-)
-from src.grade_analytics.models import Student
 
 
 def test_group_students_by_major():
@@ -40,3 +40,16 @@ def test_group_students_by_year():
 
     assert groups[3] == [alice, david]
     assert groups[2] == [bob]
+
+
+def test_create_ordered_grade_report():
+    distribution = Counter({"B": 2, "A": 3, "C": 1})
+
+    report = create_ordered_grade_report(
+        distribution,
+        ["A", "B", "C", "D", "F"],
+    )
+
+    assert isinstance(report, OrderedDict)
+    assert list(report.keys()) == ["A", "B", "C", "D", "F"]
+    assert list(report.values()) == [3, 2, 1, 0, 0]
