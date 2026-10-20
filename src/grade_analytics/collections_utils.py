@@ -1,5 +1,33 @@
-from collections import Counter
 
+
+from collections import Counter, defaultdict
+from typing import DefaultDict
+
+from src.grade_analytics.models import Student
+
+
+def group_students_by_major(
+    students: list[Student],
+) -> DefaultDict[str, list[Student]]:
+    """Group students by their major."""
+    groups: DefaultDict[str, list[Student]] = defaultdict(list)
+
+    for student in students:
+        groups[student.major].append(student)
+
+    return groups
+
+
+def group_students_by_year(
+    students: list[Student],
+) -> DefaultDict[int, list[Student]]:
+    """Group students by their year of study."""
+    groups: DefaultDict[int, list[Student]] = defaultdict(list)
+
+    for student in students:
+        groups[student.year].append(student)
+
+    return groups
 
 def count_grade_categories(
     categories: list[str],
