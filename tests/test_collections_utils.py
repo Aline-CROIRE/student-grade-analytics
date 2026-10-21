@@ -74,6 +74,15 @@ def test_rolling_average_empty():
     assert rolling.current_average() is None
 
 
+def test_rolling_average_current_average_with_scores():
+    rolling = RollingAverage(window_size=3)
+    rolling.add_score(70)
+    rolling.add_score(80)
+    rolling.add_score(90)
+
+    assert rolling.current_average() == 80
+
+
 def test_rolling_average_rejects_zero_window():
     with pytest.raises(ValueError):
         RollingAverage(window_size=0)
