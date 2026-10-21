@@ -1,9 +1,7 @@
-
 from collections import Counter, OrderedDict, defaultdict, deque, namedtuple
-from typing import DefaultDict, TypedDict
+from typing import TypedDict
 
 from src.grade_analytics.models import Student
-
 
 GradeSummary = namedtuple(
     "GradeSummary",
@@ -28,9 +26,9 @@ def count_grade_categories(
 
 def group_students_by_major(
     students: list[Student],
-) -> DefaultDict[str, list[Student]]:
+) -> defaultdict[str, list[Student]]:
     """Group students by their major."""
-    groups: DefaultDict[str, list[Student]] = defaultdict(list)
+    groups: defaultdict[str, list[Student]] = defaultdict(list)
 
     for student in students:
         groups[student.major].append(student)
@@ -40,9 +38,9 @@ def group_students_by_major(
 
 def group_students_by_year(
     students: list[Student],
-) -> DefaultDict[int, list[Student]]:
+) -> defaultdict[int, list[Student]]:
     """Group students by their year of study."""
-    groups: DefaultDict[int, list[Student]] = defaultdict(list)
+    groups: defaultdict[int, list[Student]] = defaultdict(list)
 
     for student in students:
         groups[student.year].append(student)
@@ -55,10 +53,7 @@ def create_ordered_grade_report(
     grade_order: list[str],
 ) -> OrderedDict[str, int]:
     """Create a grade report following the requested grade order."""
-    return OrderedDict(
-        (grade, distribution.get(grade, 0))
-        for grade in grade_order
-    )
+    return OrderedDict((grade, distribution.get(grade, 0)) for grade in grade_order)
 
 
 class RollingAverage:
