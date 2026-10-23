@@ -1,7 +1,8 @@
-from statistics import fmean
+from collections import defaultdict
 from typing import TypedDict
 
 from src.grade_analytics.models import Grade
+from src.grade_analytics.semester import semester_sort_key
 
 
 class SemesterTrend(TypedDict):
@@ -20,16 +21,21 @@ def calculate_semester_trends(
     Semesters are expected to use the YYYY-S1 or YYYY-S2 format.
     An empty grade list returns an empty list.
     """
-    scores_by_semester: dict[str, list[float]] = {}
+    totals_by_semester: defaultdict[str, tuple[float, int]] = defaultdict(
+        lambda: (0.0, 0)
+    )
 
     for grade in grades:
-        scores_by_semester.setdefault(grade.semester, []).append(grade.score)
+        semester_sort_key(grade.semester)
+        total, count = totals_by_semester[grade.semester]
+        totals_by_semester[grade.semester] = (total + grade.score, count + 1)
 
     trends: list[SemesterTrend] = []
     previous_average: float | None = None
 
-    for semester in sorted(scores_by_semester):
-        average = fmean(scores_by_semester[semester])
+    for semester in sorted(totals_by_semester, key=semester_sort_key):
+        total, count = totals_by_semester[semester]
+        average = total / count
         change = None if previous_average is None else average - previous_average
 
         trends.append(

@@ -1,22 +1,37 @@
 import json
-from collections import Counter
+from bisect import bisect_right
+from collections import Counter, defaultdict
+from dataclasses import dataclass
 from pathlib import Path
-from statistics import fmean
+from statistics import fmean, median
 from typing import TypedDict
 
-from src.grade_analytics.analytics import (
-    GradeStatistics,
-    calculate_grade_modes,
-    calculate_grade_statistics,
+from src.grade_analytics.analytics import GradeStatistics
+from src.grade_analytics.collections_utils import create_ordered_grade_report
+from src.grade_analytics.grade_policy import (
+    GRADE_CATEGORIES,
+    PASSING_SCORE,
+    grade_category,
 )
 from src.grade_analytics.models import Grade
-from src.grade_analytics.semester_trends import (
-    SemesterTrend,
-    calculate_semester_trends,
-)
+from src.grade_analytics.semester import semester_sort_key
+from src.grade_analytics.semester_trends import SemesterTrend
 
-PASSING_SCORE = 60.0
-GRADE_CATEGORIES = ("A", "B", "C", "D", "F")
+
+@dataclass
+class _GroupAccumulator:
+    total: float = 0.0
+    count: int = 0
+    passing_records: int = 0
+
+    def add(self, score: float) -> None:
+        self.total += score
+        self.count += 1
+        self.passing_records += score >= PASSING_SCORE
+
+    @property
+    def average(self) -> float:
+        return self.total / self.count
 
 
 class StudentPerformance(TypedDict):
@@ -24,6 +39,7 @@ class StudentPerformance(TypedDict):
 
     average: float
     grade_count: int
+    percentile_rank: float
 
 
 class DatasetOverview(TypedDict):
@@ -82,33 +98,71 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
     if not grades:
         raise ValueError("at least one grade is required")
 
-    summary = calculate_grade_statistics(grades)
-    modes = calculate_grade_modes(grades)
-    semester_trends = calculate_semester_trends(grades)
-
-    distribution_counts: Counter[str] = Counter(
-        _grade_category(grade.score) for grade in grades
+    scores: list[float] = []
+    frequencies: Counter[float] = Counter()
+    distribution_counts: Counter[str] = Counter()
+    scores_by_student: defaultdict[str, _GroupAccumulator] = defaultdict(
+        _GroupAccumulator
     )
-    grade_distribution = {
-        category: distribution_counts.get(category, 0) for category in GRADE_CATEGORIES
-    }
-
-    scores_by_student: dict[str, list[float]] = {}
-    scores_by_course: dict[str, list[float]] = {}
+    scores_by_course: defaultdict[str, _GroupAccumulator] = defaultdict(
+        _GroupAccumulator
+    )
+    scores_by_semester: defaultdict[str, _GroupAccumulator] = defaultdict(
+        _GroupAccumulator
+    )
+    passing_records = 0
 
     for grade in grades:
-        scores_by_student.setdefault(grade.student_id, []).append(grade.score)
-        scores_by_course.setdefault(grade.course_id, []).append(grade.score)
+        scores.append(grade.score)
+        frequencies[grade.score] += 1
+        distribution_counts[grade_category(grade.score)] += 1
+        scores_by_student[grade.student_id].add(grade.score)
+        scores_by_course[grade.course_id].add(grade.score)
+        scores_by_semester[grade.semester].add(grade.score)
+        passing_records += grade.score >= PASSING_SCORE
+
+    summary: GradeStatistics = {
+        "count": len(scores),
+        "mean": fmean(scores),
+        "median": median(scores),
+        "minimum": min(scores),
+        "maximum": max(scores),
+    }
+
+    highest_frequency = max(frequencies.values())
+    modes = sorted(
+        score
+        for score, frequency in frequencies.items()
+        if frequency == highest_frequency
+    )
+
+    grade_distribution = create_ordered_grade_report(
+        distribution_counts,
+        list(GRADE_CATEGORIES),
+    )
+
+    # Use the actual calculated averages. Rounding before percentile
+    # calculation can incorrectly turn distinct averages into ties.
+    student_averages = sorted(
+        accumulator.average for accumulator in scores_by_student.values()
+    )
 
     student_performance: dict[str, StudentPerformance] = {
         student_id: {
-            "average": fmean(scores),
-            "grade_count": len(scores),
+            "average": accumulator.average,
+            "grade_count": accumulator.count,
+            "percentile_rank": (
+                bisect_right(
+                    student_averages,
+                    accumulator.average,
+                )
+                / len(student_averages)
+                * 100
+            ),
         }
-        for student_id, scores in sorted(scores_by_student.items())
+        for student_id, accumulator in sorted(scores_by_student.items())
     }
 
-    passing_records = sum(grade.score >= PASSING_SCORE for grade in grades)
     failing_records = len(grades) - passing_records
     total_records = len(grades)
     pass_rate = passing_records / total_records * 100
@@ -119,19 +173,32 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
 
     course_performance: dict[str, CoursePerformance] = {}
 
-    for course_id, scores in sorted(scores_by_course.items()):
-        course_passing = sum(score >= PASSING_SCORE for score in scores)
-        course_failing = len(scores) - course_passing
-
+    for course_id, accumulator in sorted(scores_by_course.items()):
         course_performance[course_id] = {
-            "average": fmean(scores),
-            "grade_count": len(scores),
-            "passing_records": course_passing,
-            "failing_records": course_failing,
-            "pass_rate": course_passing / len(scores) * 100,
+            "average": accumulator.average,
+            "grade_count": accumulator.count,
+            "passing_records": accumulator.passing_records,
+            "failing_records": accumulator.count - accumulator.passing_records,
+            "pass_rate": accumulator.passing_records / accumulator.count * 100,
         }
 
-    semesters = sorted({grade.semester for grade in grades})
+    semester_trends: list[SemesterTrend] = []
+    previous_average: float | None = None
+
+    for semester in sorted(scores_by_semester, key=semester_sort_key):
+        average = scores_by_semester[semester].average
+        semester_trends.append(
+            {
+                "semester": semester,
+                "average": average,
+                "change": (
+                    None if previous_average is None else average - previous_average
+                ),
+            }
+        )
+        previous_average = average
+
+    semesters = [trend["semester"] for trend in semester_trends]
 
     dataset_overview: DatasetOverview = {
         "grade_records": total_records,
@@ -275,13 +342,5 @@ def write_json_report(
 
 
 def _grade_category(score: float) -> str:
-    """Map a score from 0 to 100 to its grade category."""
-    if score >= 90:
-        return "A"
-    if score >= 80:
-        return "B"
-    if score >= 70:
-        return "C"
-    if score >= PASSING_SCORE:
-        return "D"
-    return "F"
+    """Backward-compatible private wrapper around the shared grade policy."""
+    return grade_category(score)

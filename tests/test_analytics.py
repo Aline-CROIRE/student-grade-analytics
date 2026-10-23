@@ -99,6 +99,7 @@ def test_calculate_percentile_rank() -> None:
     ]
 
     assert calculate_percentile_rank(80.0, grades) == 80.0
+    assert calculate_percentile_rank(60.0, grades) == 20.0
 
 
 def test_percentile_rank_at_boundaries() -> None:

@@ -57,6 +57,30 @@ def test_semesters_are_sorted_chronologically() -> None:
     ]
 
 
+def test_semester_ordering_across_years_and_available_values() -> None:
+    grades = [
+        Grade("S001", "CS101", 90.0, "2027-S2"),
+        Grade("S001", "CS101", 70.0, "2025-S2"),
+        Grade("S001", "CS101", 80.0, "2026-S1"),
+        Grade("S001", "CS101", 75.0, "2027-S1"),
+    ]
+
+    trends = calculate_semester_trends(grades)
+
+    assert [trend["semester"] for trend in trends] == [
+        "2025-S2",
+        "2026-S1",
+        "2027-S1",
+        "2027-S2",
+    ]
+
+
+@pytest.mark.parametrize("semester", ["2026", "26-S1", "2026-S3", "2026-S10", "x-S1"])
+def test_semester_trends_reject_malformed_labels(semester: str) -> None:
+    with pytest.raises(ValueError, match="expected format YYYY-S1 or YYYY-S2"):
+        calculate_semester_trends([Grade("S001", "CS101", 80.0, semester)])
+
+
 def test_empty_grades_return_empty_trends() -> None:
     assert calculate_semester_trends([]) == []
 
