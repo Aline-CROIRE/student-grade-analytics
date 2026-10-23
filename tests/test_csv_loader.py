@@ -35,6 +35,60 @@ def test_reject_csv_missing_required_column(tmp_path):
         load_grades_from_csv(csv_path)
 
 
+def test_loads_utf8_bom_csv(tmp_path):
+    csv_path = tmp_path / "grades.csv"
+    csv_path.write_text(
+        "\ufeffstudent_id,course_id,score,semester\nS001,CS101,85,2026-S1\n",
+        encoding="utf-8",
+    )
+
+    assert load_grades_from_csv(csv_path) == [Grade("S001", "CS101", 85.0, "2026-S1")]
+
+
+def test_rejects_duplicate_headers(tmp_path):
+    csv_path = tmp_path / "grades.csv"
+    csv_path.write_text(
+        "student_id,course_id,score,score,semester\nS001,CS101,85,86,2026-S1\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="duplicate columns"):
+        load_grades_from_csv(csv_path)
+
+
+def test_rejects_extra_fields_on_csv_row(tmp_path):
+    csv_path = tmp_path / "grades.csv"
+    csv_path.write_text(
+        "student_id,course_id,score,semester\nS001,CS101,85,2026-S1,extra\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Malformed CSV row 2"):
+        load_grades_from_csv(csv_path)
+
+
+def test_rejects_malformed_quoted_csv_record(tmp_path):
+    csv_path = tmp_path / "grades.csv"
+    csv_path.write_text(
+        'student_id,course_id,score,semester\n"S001,CS101,85,2026-S1\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Malformed CSV data"):
+        load_grades_from_csv(csv_path)
+
+
+def test_rejects_invalid_semester_on_csv_row(tmp_path):
+    csv_path = tmp_path / "grades.csv"
+    csv_path.write_text(
+        "student_id,course_id,score,semester\nS001,CS101,85,2026-S3\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Invalid semester on row 2"):
+        load_grades_from_csv(csv_path)
+
+
 def test_reject_invalid_score(tmp_path):
     csv_path = tmp_path / "grades.csv"
     csv_path.write_text(

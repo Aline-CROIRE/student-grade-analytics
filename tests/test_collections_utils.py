@@ -83,9 +83,37 @@ def test_rolling_average_current_average_with_scores():
     assert rolling.current_average() == 80
 
 
-def test_rolling_average_rejects_zero_window():
-    with pytest.raises(ValueError):
-        RollingAverage(window_size=0)
+@pytest.mark.parametrize("window_size", [0, -1, 1.5, True])
+def test_rolling_average_rejects_invalid_window_size(window_size):
+    with pytest.raises(ValueError, match="greater than zero"):
+        RollingAverage(window_size=window_size)
+
+
+@pytest.mark.parametrize("score", [-1, 101, float("nan"), float("inf")])
+def test_rolling_average_rejects_invalid_score(score):
+    rolling = RollingAverage(window_size=2)
+    rolling.add_score(70)
+
+    with pytest.raises(ValueError, match="finite number between 0 and 100"):
+        rolling.add_score(score)
+
+    assert rolling.current_average() == 70
+
+
+def test_rolling_average_rejects_non_numeric_score_type():
+    rolling = RollingAverage(window_size=2)
+
+    with pytest.raises(TypeError, match="Score must be an int or float"):
+        rolling.add_score(True)
+
+
+def test_rolling_average_repeated_evictions_remain_correct():
+    rolling = RollingAverage(window_size=2)
+
+    assert rolling.add_score(10) == 10
+    assert rolling.add_score(20) == 15
+    assert rolling.add_score(30) == 25
+    assert rolling.add_score(40) == 35
 
 
 def test_create_grade_summary():

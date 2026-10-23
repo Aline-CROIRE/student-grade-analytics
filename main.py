@@ -1,4 +1,5 @@
 import tkinter as tk
+from collections import defaultdict
 from pathlib import Path
 from tkinter import filedialog
 
@@ -9,6 +10,7 @@ from src.grade_analytics.json_report import (
     write_json_report,
 )
 from src.grade_analytics.models import Grade
+from src.grade_analytics.semester import semester_sort_key
 from src.grade_analytics.terminal_ui import (
     print_dashboard,
     print_header,
@@ -56,36 +58,38 @@ def choose_analysis_period(
 ) -> tuple[str, list[Grade]] | None:
     """Choose the entire dataset, an academic year, or a semester."""
     periods: list[tuple[str, list[Grade]]] = [("Entire dataset", grades)]
+    grades_by_year: defaultdict[str, list[Grade]] = defaultdict(list)
+    grades_by_semester: defaultdict[str, list[Grade]] = defaultdict(list)
 
-    years = sorted({grade.semester.split("-")[0] for grade in grades})
+    for grade in grades:
+        year, _ = grade.semester.split("-")
+        grades_by_year[year].append(grade)
+        grades_by_semester[grade.semester].append(grade)
 
-    for year in years:
-        year_grades = [
-            grade for grade in grades if grade.semester.startswith(f"{year}-")
-        ]
-        periods.append((f"Academic year {year}", year_grades))
+    for year in sorted(grades_by_year, key=int):
+        periods.append((f"Academic year {year}", grades_by_year[year]))
 
-    semesters = sorted({grade.semester for grade in grades})
+    semesters = sorted(grades_by_semester, key=semester_sort_key)
 
     for semester in semesters:
-        semester_grades = [grade for grade in grades if grade.semester == semester]
-        periods.append((f"Semester {semester}", semester_grades))
+        periods.append((f"Semester {semester}", grades_by_semester[semester]))
 
-    print_header("CHOOSE ANALYSIS PERIOD")
-    for index, (label, _) in enumerate(periods, start=1):
-        print(f"{index:>2}. {label}")
-    print(" 0. Cancel")
+    while True:
+        print_header("CHOOSE ANALYSIS PERIOD")
+        for index, (label, _) in enumerate(periods, start=1):
+            print(f"{index:>2}. {label}")
+        print(" 0. Cancel")
 
-    choice = input("\nSelect one option: ").strip()
+        choice = input("\nSelect one option: ").strip()
 
-    if choice == "0":
-        return None
+        if choice == "0":
+            return None
 
-    if not choice.isdigit() or not 1 <= int(choice) <= len(periods):
-        print("Invalid selection.")
-        return None
+        if not choice.isdigit() or not 1 <= int(choice) <= len(periods):
+            print("Invalid selection. Please choose a listed option or 0 to cancel.")
+            continue
 
-    return periods[int(choice) - 1]
+        return periods[int(choice) - 1]
 
 
 def show_dashboard(
@@ -107,7 +111,7 @@ def export_report(
     period_label: str,
     project_root: Path,
     source_path: Path,
-) -> None:
+) -> bool:
     """Export the current analysis to JSON and readable text."""
     period_name = period_label.lower().replace(" ", "_").replace("-", "_")
     filename = f"{source_path.stem}_{period_name}_report"
@@ -116,12 +120,31 @@ def export_report(
     json_path = reports_directory / f"{filename}.json"
     text_path = reports_directory / f"{filename}.txt"
 
-    write_json_report(report, json_path)
-    write_text_report(report, period_label, text_path)
+    existing_paths = [path for path in (json_path, text_path) if path.exists()]
+    if existing_paths:
+        print("An export file already exists:")
+        for path in existing_paths:
+            print(f"  {path}")
+        overwrite = input("Replace existing report file(s)? (y/n): ").strip().lower()
+        if overwrite != "y":
+            print("Export cancelled; existing files were not changed.")
+            return False
+
+    json_written = False
+    try:
+        write_json_report(report, json_path)
+        json_written = True
+        write_text_report(report, period_label, text_path)
+    except OSError as error:
+        print(f"Could not export reports: {error}")
+        if json_written:
+            print(f"JSON report was written to {json_path}; TXT export did not finish.")
+        return False
 
     print("\nReports exported successfully.")
     print(f"JSON: {json_path}")
     print(f"Text: {text_path}")
+    return True
 
 
 def load_file_until_valid() -> tuple[Path, list[Grade]] | None:
@@ -171,15 +194,7 @@ def main() -> None:
             choice = input("Choose an action (1-4): ").strip()
 
             if choice == "1":
-                try:
-                    export_report(
-                        report,
-                        period_label,
-                        project_root,
-                        source_path,
-                    )
-                except OSError as error:
-                    print(f"Could not export reports: {error}")
+                export_report(report, period_label, project_root, source_path)
 
             elif choice == "2":
                 break

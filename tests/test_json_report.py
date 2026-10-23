@@ -41,9 +41,21 @@ def test_build_grade_report(sample_grades: list[Grade]) -> None:
         "F": 0,
     }
     assert report["student_performance"] == {
-        "S001": {"average": 85.0, "grade_count": 2},
-        "S002": {"average": 65.0, "grade_count": 2},
-        "S003": {"average": 100.0, "grade_count": 1},
+        "S001": {
+            "average": 85.0,
+            "grade_count": 2,
+            "percentile_rank": pytest.approx(200 / 3),
+        },
+        "S002": {
+            "average": 65.0,
+            "grade_count": 2,
+            "percentile_rank": pytest.approx(100 / 3),
+        },
+        "S003": {
+            "average": 100.0,
+            "grade_count": 1,
+            "percentile_rank": 100.0,
+        },
     }
 
     trends = report["semester_trends"]
@@ -136,6 +148,99 @@ def test_build_grade_report_counts_failing_scores() -> None:
         "F": 1,
     }
     assert report["pass_fail"]["failing_records"] == 1
+
+
+@pytest.mark.parametrize(
+    ("score", "category"),
+    [
+        (59.99, "F"),
+        (60.0, "D"),
+        (60.01, "D"),
+        (69.99, "D"),
+        (70.0, "C"),
+        (70.01, "C"),
+        (79.99, "C"),
+        (80.0, "B"),
+        (80.01, "B"),
+        (89.99, "B"),
+        (90.0, "A"),
+        (90.01, "A"),
+    ],
+)
+def test_grade_category_boundaries(score: float, category: str) -> None:
+    report = build_grade_report([Grade("S001", "CS101", score, "2026-S1")])
+
+    assert report["grade_distribution"][category] == 1
+    assert sum(report["grade_distribution"].values()) == 1
+
+
+def test_student_percentile_ties_and_boundaries() -> None:
+    grades = [
+        Grade("S001", "CS101", 80.0, "2026-S1"),
+        Grade("S002", "CS101", 70.0, "2026-S1"),
+        Grade("S003", "CS101", 90.0, "2026-S1"),
+        Grade("S004", "CS101", 70.0, "2026-S1"),
+    ]
+
+    performance = build_grade_report(grades)["student_performance"]
+
+    assert performance["S001"]["percentile_rank"] == 75.0
+    assert performance["S002"]["percentile_rank"] == 50.0
+    assert performance["S004"]["percentile_rank"] == 50.0
+    assert performance["S003"]["percentile_rank"] == 100.0
+
+
+def test_near_equal_displayed_averages_keep_distinct_percentiles() -> None:
+    grades = [
+        Grade("S001", "CS101", 0.1, "2026-S1"),
+        Grade("S001", "CS102", 0.2, "2026-S1"),
+        Grade("S002", "CS101", 0.15, "2026-S1"),
+        Grade("S002", "CS102", 0.15, "2026-S1"),
+        Grade("S003", "CS101", 0.14, "2026-S1"),
+    ]
+
+    performance = build_grade_report(grades)["student_performance"]
+
+    # The displayed averages are both 0.15, but floating-point calculations
+    # produce distinct actual averages for S001 and S002.
+    assert f"{performance['S001']['average']:.2f}" == "0.15"
+    assert f"{performance['S002']['average']:.2f}" == "0.15"
+
+    assert performance["S003"]["percentile_rank"] == pytest.approx(100 / 3)
+    assert performance["S002"]["percentile_rank"] == pytest.approx(200 / 3)
+    assert performance["S001"]["percentile_rank"] == 100.0
+
+
+def test_equal_actual_averages_share_percentiles() -> None:
+    grades = [
+        Grade("S001", "CS101", 0.1, "2026-S1"),
+        Grade("S001", "CS102", 0.3, "2026-S1"),
+        Grade("S002", "CS101", 0.2, "2026-S1"),
+        Grade("S002", "CS102", 0.2, "2026-S1"),
+        Grade("S003", "CS101", 0.1, "2026-S1"),
+    ]
+
+    performance = build_grade_report(grades)["student_performance"]
+
+    assert performance["S001"]["average"] == performance["S002"]["average"]
+    assert performance["S001"]["percentile_rank"] == 100.0
+    assert performance["S002"]["percentile_rank"] == 100.0
+    assert performance["S003"]["percentile_rank"] == pytest.approx(100 / 3)
+
+
+def test_percentile_rank_is_serialized_in_json(
+    tmp_path,
+    sample_grades: list[Grade],
+) -> None:
+    output_path = tmp_path / "report.json"
+    report = build_grade_report(sample_grades)
+
+    write_json_report(report, output_path)
+
+    loaded_report = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded_report["student_performance"]["S001"][
+        "percentile_rank"
+    ] == pytest.approx(200 / 3)
 
 
 def test_build_grade_report_rejects_empty_grades() -> None:

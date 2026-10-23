@@ -1,5 +1,8 @@
 from dataclasses import dataclass, field
 
+from src.grade_analytics.grade_policy import validate_score
+from src.grade_analytics.semester import semester_sort_key
+
 
 @dataclass
 class Course:
@@ -18,6 +21,10 @@ class Grade:
     course_id: str
     score: float
     semester: str
+
+    def __post_init__(self) -> None:
+        validate_score(self.score)
+        semester_sort_key(self.semester)
 
 
 @dataclass

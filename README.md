@@ -1,71 +1,55 @@
-
 # Student Grade Analytics Tool
 
-A Python application that loads student grade records from CSV files and generates statistical reports, student rankings, course comparisons, grade distributions, and semester trends.
-
-The application provides an interactive terminal interface and can export reports in JSON and plain-text formats.
-
-## Features
-
-- **Data models:** Use dataclasses and typed models to represent students, courses, and grades.
-- **Advanced collections:** Apply `Counter`, `defaultdict`, `OrderedDict`, `deque`, and named tuples where appropriate.
-- **CSV input:** Load grade records from a selected CSV file and validate the input.
-- **Statistical analysis:** Calculate the mean, median, minimum, maximum, modes, and percentile ranks.
-- **Grade distribution:** Summarize grade categories and their percentages.
-- **Student rankings:** Compare student averages and handle tied rankings.
-- **Course performance:** Compare course averages, record counts, and pass rates.
-- **Semester trends:** Compare semester averages and identify increases or decreases.
-- **Pass/fail analysis:** Summarize passing and failing records and student averages.
-- **Report exports:** Save analysis results as JSON and readable TXT reports.
-- **Error handling:** Validate input and handle common file and data problems.
-- **Automated quality checks:** Use pytest, coverage, mypy, Ruff, and Black.
-
-## Requirements
-
-- Python 3.11 or later
-- pip
+A Python 3.11+ command-line application that reads student grade records from
+CSV, analyzes the complete dataset or a year/semester, and displays or exports
+statistical reports.
 
 ## Setup
 
-Clone the repository:
-
-```bash
-git clone https://github.com/Aline-CROIRE/student-grade-analytics.git
-cd student-grade-analytics
-```
-
-Create and activate a virtual environment on Windows PowerShell:
+Create and activate a virtual environment on Windows PowerShell, then install
+the application and development tools:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-```
-
-Install the dependencies:
-
-```powershell
 python -m pip install -r requirements.txt
 ```
 
-## Run the application
+The requirements file includes pytest, coverage, Ruff, Black, and Mypy.
 
-Start the interactive application:
+## Run
 
 ```powershell
 python main.py
 ```
 
-The application allows you to:
+Choose a CSV from the native file picker. Select the complete dataset, an
+academic year, or an individual semester. From the analysis workspace:
 
-1. Select a CSV file using a file picker.
-2. Choose the entire dataset, an academic year, or a semester.
-3. Review the analytics dashboard.
-4. Export the selected analysis to JSON and TXT.
-5. Analyze another period or select another CSV file.
+1. Export the current analysis to JSON and TXT.
+2. Analyze another period in the selected CSV.
+3. Choose another CSV.
+4. Exit.
 
-## Input CSV format
+Invalid period choices are rejected and the period menu is shown again. Use
+`0` to cancel period selection. Cancelling the file picker exits cleanly.
+Reports are written under `reports/`; if either target file already exists,
+the application asks before replacing it. If the JSON write succeeds but the
+TXT write fails, the application reports the partial result rather than
+claiming that both exports succeeded.
 
-The CSV file must contain the following columns:
+## Input CSV
+
+The required columns are `student_id`, `course_id`, `score`, and `semester`.
+Additional named columns are ignored. Headers must be unique; rows with missing
+required values, extra fields, invalid numbers, or scores outside 0–100 are
+rejected with a row-specific error. UTF-8 and UTF-8-with-BOM files are
+supported. Invalid rows are not silently skipped. Duplicate records are not
+deduplicated or rejected.
+
+Semester labels must exactly match `YYYY-S1` or `YYYY-S2`, with a nonzero
+four-digit year. Semester comparisons use year and semester number, not string
+sorting.
 
 ```csv
 student_id,course_id,score,semester
@@ -75,88 +59,178 @@ S002,CS101,60,2026-S1
 S002,CS102,70,2026-S2
 ```
 
-Each row represents one student's grade for a course in a semester.
+Each row is one grade record. Student and course names, majors, and credits
+are not present in this schema, so reports use IDs and cannot analyze those
+attributes.
 
-The application uses student IDs and course IDs because names and additional course information are not included in this format.
+## Analytics policy and interpretation
+
+The following category boundaries and passing threshold are project policy
+assumptions, not universal academic rules:
+
+| Category | Score range |
+|---|---:|
+| A | 90–100 |
+| B | 80–<90 |
+| C | 70–<80 |
+| D | 60–<70 |
+| F | 0–<60 |
+
+A record with a score of at least 60 is counted as passing. Record-level pass
+rates count grade records; the separate student pass count checks each
+student's average across their available records.
+
+Student percentile ranks in reports compare each student's average with all
+student averages in the selected analysis, rounded to the same two decimal
+places used for display and ranking. The convention is the percentage of
+displayed averages less than or equal to the student's displayed average;
+students tied at that precision share a percentile. The standalone
+`calculate_percentile_rank(score, grades)` helper applies the same `<=`
+convention to individual grade records. The minimum observed value therefore
+has a nonzero percentile, while the maximum has 100%.
+
+Student ranking ties use the displayed average rounded to two decimal places.
+Equal displayed averages share a competition rank (for example, 1, 1, 3).
+Semester changes are score percentage-point differences from the previous
+recorded semester; they do not explain why scores changed.
 
 ## Reports
 
-The application exports two report formats:
+JSON reports contain summary statistics, modes, grade distribution,
+student-average and percentile data, semester trends, dataset overview,
+pass/fail metrics, course performance, and explanatory insights. TXT reports
+show the same analysis in a terminal-readable layout.
 
-- **JSON:** Structured analysis results suitable for further processing.
-- **TXT:** A readable report containing the dashboard sections and key findings.
+The following is a representative JSON report generated by the current
+application for one 80-point grade record:
 
-Generated reports are saved in the `reports/` directory.
+```json
+{
+  "summary": {
+    "count": 1,
+    "mean": 80.0,
+    "median": 80.0,
+    "minimum": 80.0,
+    "maximum": 80.0
+  },
+  "modes": [80.0],
+  "grade_distribution": {
+    "A": 0,
+    "B": 1,
+    "C": 0,
+    "D": 0,
+    "F": 0
+  },
+  "student_performance": {
+    "S001": {
+      "average": 80.0,
+      "grade_count": 1,
+      "percentile_rank": 100.0
+    }
+  },
+  "semester_trends": [
+    {
+      "semester": "2026-S1",
+      "average": 80.0,
+      "change": null
+    }
+  ],
+  "dataset_overview": {
+    "grade_records": 1,
+    "unique_students": 1,
+    "unique_courses": 1,
+    "semesters": ["2026-S1"]
+  },
+  "pass_fail": {
+    "passing_threshold": 60.0,
+    "passing_records": 1,
+    "failing_records": 0,
+    "pass_rate": 100.0,
+    "fail_rate": 0.0,
+    "students_meeting_average_threshold": 1,
+    "students_below_average_threshold": 0
+  },
+  "course_performance": {
+    "CS101": {
+      "average": 80.0,
+      "grade_count": 1,
+      "passing_records": 1,
+      "failing_records": 0,
+      "pass_rate": 100.0
+    }
+  },
+  "insights": [
+    "The average score is 80.00%, above the 60% passing threshold.",
+    "1 of 1 grade records pass (100.0%); 0 fail (0.0%).",
+    "1 of 1 students have an average at or above 60%.",
+    "The most common grade category is B (1 record(s)).",
+    "Highest course average: CS101 (80.00%).",
+    "Trend comparison is unavailable because fewer than two semesters are represented in this analysis."
+  ]
+}
+```
 
-The passing threshold is currently set to 60%. Confirm the appropriate threshold for your institution before using the results for official academic decisions.
+A concise excerpt from the matching terminal report:
 
-## Run the tests
+```text
+2. OVERALL PERFORMANCE
+Average score (mean)                                               80.00%
+Median score                                                       80.00%
 
-Run all tests:
+5. STUDENT RANKINGS
+Rank    Student ID               Average    Percentile    Grades
+1       S001                      80.00%       100.00%         1
+
+7. SEMESTER TRENDS
+2026-S1                   80.00%             N/A          Baseline
+```
+
+## Collection choices
+
+| Structure | Application | Reason / trade-off |
+|---|---|---|
+| `Counter` | Counts exact-score frequencies for modes and category frequencies for the report. | Direct frequency-analysis use; storage is proportional to the distinct values. |
+| `defaultdict` | Creates student, course, and semester aggregation records during report construction. | Avoids manual missing-key setup and groups actual input data. |
+| `OrderedDict` | Produces the fixed A/B/C/D/F order in the grade-distribution report. | Kept to meet the lab's explicit requirement; ordinary insertion-ordered `dict` would also preserve this order on supported Python versions. |
+| `deque` | Stores the bounded recent-score window in `RollingAverage`. | `maxlen` evicts the oldest item efficiently; a running total makes add/read operations O(1). |
+
+The collection helpers also include `defaultdict` grouping by major and year
+for `Student` objects. The CSV schema does not currently provide major/year
+attributes, so those helpers are not part of report generation.
+
+## Complexity and limitations
+
+CSV loading retains all `N` grade records. Report aggregation makes one pass
+over those records and keeps a score list for the standard-library median,
+separate `Counter` frequency counts, and aggregate records for students,
+courses, and semesters.
+Aggregation is O(N); report generation is O(N log N + S log S + C log C +
+T log T), where S, C, and T are the distinct student, course, and semester
+counts. The dominant sorting includes median calculation, student ranking,
+and ordered output groups. Auxiliary memory is O(N + S + C + T), in addition
+to the loaded input and generated report. The current implementation favors
+simple in-memory processing for small and medium CSV files; it is not a
+streaming large-file tool and no benchmark measurements are claimed.
+
+The application cannot identify missing source records, account for unequal
+course loads, or infer reasons for performance changes. Confirm the score
+policy against institutional rules before using the results for formal
+decisions. The native picker requires a working Tk installation.
+
+## Tests and quality checks
 
 ```powershell
 python -m pytest -v
-```
-
-Measure statement and branch coverage:
-
-```powershell
 python -m coverage run --branch -m pytest
 python -m coverage report -m
-```
-
-Check type correctness:
-
-```powershell
+python -m ruff check src tests main.py
+python -m black --check src tests main.py
 python -m mypy src main.py
 ```
 
-Check code quality:
+## Screenshot deliverable
 
-```powershell
-python -m ruff check src tests main.py
-```
-
-Check formatting:
-
-```powershell
-python -m black --check src tests main.py
-```
-
-## Project structure
-
-```text
-student-grade-analytics/
-├── data/
-├── reports/
-├── src/
-│   └── grade_analytics/
-│       ├── analytics.py
-│       ├── collections_utils.py
-│       ├── csv_loader.py
-│       ├── json_report.py
-│       ├── models.py
-│       ├── semester_trends.py
-│       └── terminal_ui.py
-├── tests/
-├── main.py
-├── requirements.txt
-└── README.md
-```
-
-## Error handling
-
-The application validates CSV input before analysis and provides error handling for common data and file problems. Empty datasets cannot produce meaningful analytics, and report exports create their parent directories when needed.
-
-## Learning objectives
-
-This project demonstrates:
-
-- Python data structures and advanced collections.
-- Dataclasses, type hints, and maintainable module design.
-- CSV and JSON file handling.
-- Statistical analysis and data interpretation.
-- Exception handling and input validation.
-- Automated testing and branch coverage.
-- Static type checking, linting, and code formatting.
-- Git-based feature development and quality assurance.
+No screenshot is included. After verifying the application on your machine,
+capture its real running dashboard and add it at
+`docs/images/StudentGradeAnalytics.png` before submission. Do not use the
+sample excerpt above as a substitute for the required execution screenshot.
