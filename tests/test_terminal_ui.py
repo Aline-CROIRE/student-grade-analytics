@@ -48,6 +48,60 @@ def test_report_explains_single_semester_limitation() -> None:
     assert "Baseline" in text
 
 
+def test_near_equal_displayed_averages_receive_distinct_ranks() -> None:
+    grades = [
+        Grade("S001", "CS101", 0.1, "2026-S1"),
+        Grade("S001", "CS102", 0.2, "2026-S1"),
+        Grade("S002", "CS101", 0.15, "2026-S1"),
+        Grade("S002", "CS102", 0.15, "2026-S1"),
+        Grade("S003", "CS101", 0.14, "2026-S1"),
+    ]
+
+    text = format_report_text(build_grade_report(grades), "Entire dataset")
+    ranking_lines = [
+        line
+        for line in text.splitlines()
+        if any(student_id in line for student_id in ("S001", "S002", "S003"))
+    ]
+
+    s001_line = next(line for line in ranking_lines if "S001" in line)
+    s002_line = next(line for line in ranking_lines if "S002" in line)
+    s003_line = next(line for line in ranking_lines if "S003" in line)
+
+    assert s001_line.startswith("1")
+    assert s002_line.startswith("2")
+    assert s003_line.startswith("3")
+
+    assert f"{0.1 + 0.2:.2f}" == "0.30"
+
+
+def test_equal_actual_averages_share_competition_rank() -> None:
+    grades = [
+        Grade("S001", "CS101", 0.1, "2026-S1"),
+        Grade("S001", "CS102", 0.3, "2026-S1"),
+        Grade("S002", "CS101", 0.2, "2026-S1"),
+        Grade("S002", "CS102", 0.2, "2026-S1"),
+        Grade("S003", "CS101", 0.1, "2026-S1"),
+    ]
+
+    text = format_report_text(build_grade_report(grades), "Entire dataset")
+    ranking_lines = [
+        line
+        for line in text.splitlines()
+        if any(student_id in line for student_id in ("S001", "S002", "S003"))
+    ]
+
+    s001_line = next(line for line in ranking_lines if "S001" in line)
+    s002_line = next(line for line in ranking_lines if "S002" in line)
+    s003_line = next(line for line in ranking_lines if "S003" in line)
+
+    assert s001_line.startswith("1")
+    assert s002_line.startswith("1")
+    assert s003_line.startswith("3")
+
+    assert "actual averages share a competition rank" in text
+
+
 def test_report_can_be_saved_as_readable_text(tmp_path) -> None:
     grades = [
         Grade("S001", "CS101", 90.0, "2026-S1"),

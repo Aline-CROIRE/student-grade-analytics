@@ -1,6 +1,7 @@
 from collections import Counter, OrderedDict, defaultdict, deque, namedtuple
 from typing import TypedDict
 
+from src.grade_analytics.grade_policy import validate_score
 from src.grade_analytics.models import Student
 
 GradeSummary = namedtuple(
@@ -60,22 +61,31 @@ class RollingAverage:
     """Calculate averages over the most recent scores."""
 
     def __init__(self, window_size: int) -> None:
-        if window_size <= 0:
+        if (
+            isinstance(window_size, bool)
+            or not isinstance(window_size, int)
+            or window_size <= 0
+        ):
             raise ValueError("Window size must be greater than zero.")
 
         self._scores: deque[float] = deque(maxlen=window_size)
+        self._total = 0.0
 
     def add_score(self, score: float) -> float:
         """Add a score and return the current rolling average."""
+        validate_score(score)
+        if len(self._scores) == self._scores.maxlen:
+            self._total -= self._scores[0]
         self._scores.append(score)
-        return sum(self._scores) / len(self._scores)
+        self._total += score
+        return self._total / len(self._scores)
 
     def current_average(self) -> float | None:
         """Return the current average, or None if there are no scores."""
         if not self._scores:
             return None
 
-        return sum(self._scores) / len(self._scores)
+        return self._total / len(self._scores)
 
 
 def create_grade_summary(

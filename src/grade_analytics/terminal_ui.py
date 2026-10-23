@@ -92,6 +92,7 @@ def format_report_text(report: GradeReport, period_label: str) -> str:
     most_common = [
         category for category, count in distribution.items() if count == largest_count
     ]
+
     lines.extend(
         [
             "",
@@ -101,7 +102,10 @@ def format_report_text(report: GradeReport, period_label: str) -> str:
             ),
             "",
             "5. STUDENT RANKINGS",
-            f"{'Rank':<8}{'Student ID':<22}{'Average':>14}{'Grades':>12}",
+            (
+                f"{'Rank':<8}{'Student ID':<20}{'Average':>12}"
+                f"{'Percentile':>14}{'Grades':>10}"
+            ),
         ]
     )
 
@@ -118,23 +122,23 @@ def format_report_text(report: GradeReport, period_label: str) -> str:
         start=1,
     ):
         average = performance["average"]
-        rank = (
-            previous_rank
-            if previous_average is not None and average == previous_average
-            else position
-        )
+        rank = previous_rank if previous_average == average else position
+
         lines.append(
-            f"{rank:<8}{student_id:<22}{average:>13.2f}%"
-            f"{performance['grade_count']:>12}"
+            f"{rank:<8}{student_id:<20}{average:>11.2f}%"
+            f"{performance['percentile_rank']:>13.2f}%"
+            f"{performance['grade_count']:>10}"
         )
+
         previous_average = average
         previous_rank = rank
 
     lines.extend(
         [
             "",
-            "Note: rankings use available grade records only. Equal averages",
-            "receive the same rank; the next rank reflects their position.",
+            "Note: students with equal actual averages share a competition rank.",
+            "Percentiles are the percentage of student averages less than or equal",
+            "to each student's actual average; equal averages share percentile rank.",
             "",
             "6. COURSE PERFORMANCE",
             (
@@ -149,13 +153,13 @@ def format_report_text(report: GradeReport, period_label: str) -> str:
         key=lambda item: (-item[1]["average"], item[0]),
     )
 
-    for course_id, performance in ranked_courses:
+    for course_id, course_result in ranked_courses:
         lines.append(
             f"{course_id:<18}"
-            f"{performance['average']:>11.2f}%"
-            f"{performance['grade_count']:>12}"
-            f"{performance['pass_rate']:>13.1f}%"
-            f"{performance['failing_records']:>12}"
+            f"{course_result['average']:>11.2f}%"
+            f"{course_result['grade_count']:>12}"
+            f"{course_result['pass_rate']:>13.1f}%"
+            f"{course_result['failing_records']:>12}"
         )
 
     lines.extend(["", "7. SEMESTER TRENDS"])
@@ -202,6 +206,7 @@ def format_report_text(report: GradeReport, period_label: str) -> str:
     lines.extend(["", "8. MOST FREQUENT SCORES"])
 
     modes = report["modes"]
+
     if len(modes) == total:
         lines.append(
             "Every score occurs once; all scores tie for the highest frequency."
