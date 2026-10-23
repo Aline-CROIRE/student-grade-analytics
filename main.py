@@ -76,8 +76,10 @@ def choose_analysis_period(
 
     while True:
         print_header("CHOOSE ANALYSIS PERIOD")
+
         for index, (label, _) in enumerate(periods, start=1):
             print(f"{index:>2}. {label}")
+
         print(" 0. Cancel")
 
         choice = input("\nSelect one option: ").strip()
@@ -121,24 +123,31 @@ def export_report(
     text_path = reports_directory / f"{filename}.txt"
 
     existing_paths = [path for path in (json_path, text_path) if path.exists()]
+
     if existing_paths:
         print("An export file already exists:")
+
         for path in existing_paths:
             print(f"  {path}")
+
         overwrite = input("Replace existing report file(s)? (y/n): ").strip().lower()
+
         if overwrite != "y":
             print("Export cancelled; existing files were not changed.")
             return False
 
     json_written = False
+
     try:
         write_json_report(report, json_path)
         json_written = True
         write_text_report(report, period_label, text_path)
     except OSError as error:
         print(f"Could not export reports: {error}")
+
         if json_written:
             print(f"JSON report was written to {json_path}; TXT export did not finish.")
+
         return False
 
     print("\nReports exported successfully.")
@@ -161,6 +170,7 @@ def load_file_until_valid() -> tuple[Path, list[Grade]] | None:
             return selected_path, grades
 
         retry = input("Choose another file? (y/n): ").strip().lower()
+
         if retry != "y":
             return None
 
@@ -201,6 +211,7 @@ def main() -> None:
 
             elif choice == "3":
                 replacement = load_file_until_valid()
+
                 if replacement is not None:
                     source_path, grades = replacement
                     break

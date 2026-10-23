@@ -101,6 +101,7 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
     scores: list[float] = []
     frequencies: Counter[float] = Counter()
     distribution_counts: Counter[str] = Counter()
+
     scores_by_student: defaultdict[str, _GroupAccumulator] = defaultdict(
         _GroupAccumulator
     )
@@ -110,6 +111,7 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
     scores_by_semester: defaultdict[str, _GroupAccumulator] = defaultdict(
         _GroupAccumulator
     )
+
     passing_records = 0
 
     for grade in grades:
@@ -141,8 +143,8 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
         list(GRADE_CATEGORIES),
     )
 
-    # Use the actual calculated averages. Rounding before percentile
-    # calculation can incorrectly turn distinct averages into ties.
+    # Use actual calculated averages. Rounding before percentile calculation
+    # can incorrectly turn distinct averages into ties.
     student_averages = sorted(
         accumulator.average for accumulator in scores_by_student.values()
     )
@@ -187,6 +189,7 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
 
     for semester in sorted(scores_by_semester, key=semester_sort_key):
         average = scores_by_semester[semester].average
+
         semester_trends.append(
             {
                 "semester": semester,
@@ -196,6 +199,7 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
                 ),
             }
         )
+
         previous_average = average
 
     semesters = [trend["semester"] for trend in semester_trends]
@@ -230,6 +234,7 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
         "course_performance": course_performance,
         "insights": [],
     }
+
     report["insights"] = _build_insights(report)
 
     return report
@@ -244,6 +249,7 @@ def _build_insights(report: GradeReport) -> list[str]:
     trends = report["semester_trends"]
 
     total = summary["count"]
+
     insights = [
         (
             f"The average score is {summary['mean']:.2f}%, "
@@ -267,6 +273,7 @@ def _build_insights(report: GradeReport) -> list[str]:
     most_common_categories = [
         category for category, count in distribution.items() if count == largest_count
     ]
+
     insights.append(
         f"The most common grade category is "
         f"{', '.join(most_common_categories)} "
