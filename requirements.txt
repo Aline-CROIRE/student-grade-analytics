@@ -1,2 +1,7 @@
+
 pytest
 mypy
+ruff
+black
+coverage
+
