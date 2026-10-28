@@ -37,7 +37,7 @@ marks but are not explicit requirements.
 | C4 | Uncommitted deletion of a duplicate screenshot (`docs/working screenshoot.png`) | Repository hygiene | Recommended | 1 | Resolved |
 | H1 | No measured comparison of memory usage between collection approaches; performance notes are qualitative only | Memory Efficiency: "Compare memory usage of different collection approaches" | Mandatory | 7 | Open |
 | H2 | `deque` is not used to track semester trends; `RollingAverage` is not used by the application | Statistical Processing: "Track grade trends over semesters using deque" | Mandatory | 4 | Resolved |
-| H3 | Grouping students by major/year is only exercised in unit tests; the sample data has no major/year, and `Student`/`Course` are unused by the application | Data Structures: "Use defaultdict for grouping students by major/year" | Mandatory | 5 | Open |
+| H3 | Grouping students by major/year is only exercised in unit tests; the sample data has no major/year, and `Student`/`Course` are unused by the application | Data Structures: "Use defaultdict for grouping students by major/year" | Mandatory | 5 | Resolved (`Course` is still defined but not used by the application) |
 | H4 | No test uses the shipped `data/grades.csv` | Testing & Validation: "sample data tests" | Mandatory | 2 | Resolved |
 | H5 | The application requires the Tkinter file picker; no command-line path option; Tkinter requirement undocumented | Setup instructions | Recommended | 8, 9 | Open |
 | M1 | JSON report has no rank or top-performer data | Description: "insights like top performers"; Milestone: "implement ranking algorithm" | Recommended | 6 | Open |
