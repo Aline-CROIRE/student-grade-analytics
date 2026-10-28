@@ -3,14 +3,19 @@ from pathlib import Path
 
 import pytest
 
-from src.grade_analytics.csv_loader import load_grades_from_csv
+from src.grade_analytics.csv_loader import (
+    load_grades_from_csv,
+    load_students_from_csv,
+)
 from src.grade_analytics.json_report import (
     GradeReport,
     build_grade_report,
     write_json_report,
 )
 
-SAMPLE_CSV = Path(__file__).resolve().parent.parent / "data" / "grades.csv"
+DATA_DIRECTORY = Path(__file__).resolve().parent.parent / "data"
+SAMPLE_CSV = DATA_DIRECTORY / "grades.csv"
+SAMPLE_STUDENTS_CSV = DATA_DIRECTORY / "students.csv"
 
 
 @pytest.fixture
@@ -31,6 +36,16 @@ def test_sample_csv_loads_all_records() -> None:
         "S005",
     }
     assert {grade.course_id for grade in grades} == {"CS101", "CS102"}
+
+
+def test_sample_students_cover_every_graded_student() -> None:
+    students = load_students_from_csv(SAMPLE_STUDENTS_CSV)
+    grades = load_grades_from_csv(SAMPLE_CSV)
+
+    assert len(students) == 5
+    assert {student.student_id for student in students} == {
+        grade.student_id for grade in grades
+    }
 
 
 def test_sample_summary_statistics(sample_report: GradeReport) -> None:
