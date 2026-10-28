@@ -1,3 +1,5 @@
+"""Dataclass models for students, courses, and grades."""
+
 from dataclasses import dataclass, field
 
 from src.grade_analytics.grade_policy import validate_score

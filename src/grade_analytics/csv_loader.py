@@ -1,3 +1,5 @@
+"""Read and validate grade and student CSV files."""
+
 import csv
 from collections.abc import Iterator, Sequence
 from pathlib import Path

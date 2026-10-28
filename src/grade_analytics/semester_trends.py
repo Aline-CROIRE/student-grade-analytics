@@ -1,3 +1,5 @@
+"""Semester averages, changes, and deque-based rolling averages."""
+
 from collections import defaultdict
 from typing import TypedDict
 

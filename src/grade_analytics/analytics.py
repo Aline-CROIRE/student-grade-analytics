@@ -1,3 +1,5 @@
+"""Summary statistics, modes, and percentile ranks for grade records."""
+
 from collections import Counter
 from statistics import fmean, median
 from typing import TypedDict
