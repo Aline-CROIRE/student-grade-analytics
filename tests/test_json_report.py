@@ -32,7 +32,8 @@ def test_build_grade_report(sample_grades: list[Grade]) -> None:
         "minimum": 60.0,
         "maximum": 100.0,
     }
-    assert report["modes"] == [60.0, 70.0, 80.0, 90.0, 100.0]
+    assert report["modes"] == []
+    assert report["mode_frequency"] == 1
     assert report["grade_distribution"] == {
         "A": 2,
         "B": 1,
@@ -275,6 +276,21 @@ def test_write_json_report_accepts_string_path(
     write_json_report(build_grade_report(sample_grades), str(output_path))
 
     assert output_path.exists()
+
+
+def test_report_modes_list_repeated_scores_with_their_frequency() -> None:
+    grades = [
+        Grade("S001", "CS101", 80.0, "2026-S1"),
+        Grade("S002", "CS101", 80.0, "2026-S1"),
+        Grade("S003", "CS101", 70.0, "2026-S1"),
+        Grade("S004", "CS101", 70.0, "2026-S1"),
+        Grade("S005", "CS101", 90.0, "2026-S1"),
+    ]
+
+    report = build_grade_report(grades)
+
+    assert report["modes"] == [70.0, 80.0]
+    assert report["mode_frequency"] == 2
 
 
 def test_insights_name_the_top_performer(sample_grades: list[Grade]) -> None:

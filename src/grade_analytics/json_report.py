@@ -108,6 +108,7 @@ class GradeReport(TypedDict):
 
     summary: GradeStatistics
     modes: list[float]
+    mode_frequency: int
     grade_distribution: dict[str, int]
     student_performance: dict[str, StudentPerformance]
     top_performers: list[TopPerformer]
@@ -217,6 +218,11 @@ def build_grade_report(
 
     summary: GradeStatistics = calculate_grade_statistics(grades)
     modes = calculate_grade_modes(grades)
+    mode_frequency = sum(grade.score == modes[0] for grade in grades)
+
+    # When no score repeats, every score would tie as a mode; report none.
+    if mode_frequency == 1:
+        modes = []
 
     grade_distribution = create_ordered_grade_report(
         distribution_counts,
@@ -311,6 +317,7 @@ def build_grade_report(
     report: GradeReport = {
         "summary": summary,
         "modes": modes,
+        "mode_frequency": mode_frequency,
         "grade_distribution": grade_distribution,
         "student_performance": student_performance,
         "top_performers": top_performers,

@@ -165,6 +165,29 @@ def test_dashboard_shows_performance_by_major_and_year() -> None:
     assert all(len(row) <= 76 for row in rows)
 
 
+def test_dashboard_reports_no_mode_when_every_score_is_unique() -> None:
+    grades = [
+        Grade("S001", "CS101", 80.0, "2026-S1"),
+        Grade("S002", "CS101", 70.0, "2026-S1"),
+    ]
+
+    text = format_report_text(build_grade_report(grades), "Entire dataset")
+
+    assert "Every score occurs once, so there is no most frequent score." in text
+
+
+def test_dashboard_shows_mode_frequency() -> None:
+    grades = [
+        Grade("S001", "CS101", 80.0, "2026-S1"),
+        Grade("S002", "CS101", 80.0, "2026-S1"),
+        Grade("S003", "CS101", 70.0, "2026-S1"),
+    ]
+
+    text = format_report_text(build_grade_report(grades), "Entire dataset")
+
+    assert "Most frequent score(s): 80 (2 records each)" in text
+
+
 def test_dashboard_explains_missing_student_profiles() -> None:
     text = format_report_text(
         build_grade_report([Grade("S001", "CS101", 80.0, "2026-S1")]),

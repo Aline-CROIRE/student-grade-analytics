@@ -247,13 +247,13 @@ def format_report_text(report: GradeReport, period_label: str) -> str:
 
     modes = report["modes"]
 
-    if len(modes) == total:
-        lines.append(
-            "Every score occurs once; all scores tie for the highest frequency."
-        )
+    if not modes:
+        lines.append("Every score occurs once, so there is no most frequent score.")
     else:
         lines.append(
-            "Most frequent score(s): " + ", ".join(f"{score:g}" for score in modes)
+            "Most frequent score(s): "
+            + ", ".join(f"{score:g}" for score in modes)
+            + f" ({report['mode_frequency']} records each)"
         )
 
     lines.extend(["", "10. KEY FINDINGS"])
