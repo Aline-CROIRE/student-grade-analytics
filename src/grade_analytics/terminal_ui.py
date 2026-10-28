@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from src.grade_analytics.json_report import GradeReport
+from src.grade_analytics.semester_trends import DEFAULT_TREND_WINDOW
 
 WIDTH = 76
 
@@ -165,7 +166,10 @@ def format_report_text(report: GradeReport, period_label: str) -> str:
     lines.extend(["", "7. SEMESTER TRENDS"])
 
     if report["semester_trends"]:
-        lines.append(f"{'Semester':<18}{'Average':>14}{'Change':>16}{'Direction':>18}")
+        lines.append(
+            f"{'Semester':<14}{'Average':>12}{'Rolling avg':>14}"
+            f"{'Change':>16}{'Direction':>14}"
+        )
 
         for trend in report["semester_trends"]:
             change = trend["change"]
@@ -184,11 +188,17 @@ def format_report_text(report: GradeReport, period_label: str) -> str:
                 direction = "Unchanged"
 
             lines.append(
-                f"{trend['semester']:<18}"
-                f"{trend['average']:>13.2f}%"
+                f"{trend['semester']:<14}"
+                f"{trend['average']:>11.2f}%"
+                f"{trend['rolling_average']:>13.2f}%"
                 f"{change_text:>16}"
-                f"{direction:>18}"
+                f"{direction:>14}"
             )
+
+        lines.append(
+            f"Rolling avg is the mean of the most recent {DEFAULT_TREND_WINDOW} "
+            "semester averages."
+        )
 
         if len(report["semester_trends"]) == 1:
             lines.append(
