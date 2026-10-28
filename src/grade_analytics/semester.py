@@ -1,3 +1,6 @@
+"""Validate semester labels and sort them chronologically."""
+
+
 def semester_sort_key(semester: str) -> tuple[int, int]:
     """Validate and return the chronological key for a YYYY-S1/S2 label."""
     parts = semester.split("-")

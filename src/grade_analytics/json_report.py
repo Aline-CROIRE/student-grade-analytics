@@ -1,3 +1,5 @@
+"""Build the grade analytics report and write it as JSON."""
+
 import json
 from bisect import bisect_right
 from collections import Counter, defaultdict
