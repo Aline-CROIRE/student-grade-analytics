@@ -130,27 +130,16 @@ def format_report_text(report: GradeReport, period_label: str) -> str:
 
     ranked_students = sorted(
         report["student_performance"].items(),
-        key=lambda item: (-item[1]["average"], item[0]),
+        key=lambda item: (item[1]["rank"], item[0]),
     )
 
-    previous_average: float | None = None
-    previous_rank = 0
-
-    for position, (student_id, performance) in enumerate(
-        ranked_students,
-        start=1,
-    ):
-        average = performance["average"]
-        rank = previous_rank if previous_average == average else position
-
+    for student_id, performance in ranked_students:
         lines.append(
-            f"{rank:<8}{student_id:<20}{average:>11.2f}%"
+            f"{performance['rank']:<8}{student_id:<20}"
+            f"{performance['average']:>11.2f}%"
             f"{performance['percentile_rank']:>13.2f}%"
             f"{performance['grade_count']:>10}"
         )
-
-        previous_average = average
-        previous_rank = rank
 
     lines.extend(
         [

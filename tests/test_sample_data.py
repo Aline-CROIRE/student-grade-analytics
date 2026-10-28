@@ -107,8 +107,14 @@ def test_sample_student_performance(sample_report: GradeReport) -> None:
     assert performance["S002"]["percentile_rank"] == pytest.approx(40.0)
     assert performance["S004"]["percentile_rank"] == pytest.approx(40.0)
 
-    top_student = max(performance, key=lambda student: performance[student]["average"])
-    assert top_student == "S003"
+    assert {
+        student_id: result["rank"] for student_id, result in performance.items()
+    } == {"S003": 1, "S005": 2, "S001": 3, "S002": 4, "S004": 4}
+    assert [item["student_id"] for item in sample_report["top_performers"]] == [
+        "S003",
+        "S005",
+        "S001",
+    ]
 
 
 def test_sample_course_performance(sample_report: GradeReport) -> None:

@@ -45,16 +45,19 @@ def test_build_grade_report(sample_grades: list[Grade]) -> None:
             "average": 85.0,
             "grade_count": 2,
             "percentile_rank": pytest.approx(200 / 3),
+            "rank": 2,
         },
         "S002": {
             "average": 65.0,
             "grade_count": 2,
             "percentile_rank": pytest.approx(100 / 3),
+            "rank": 3,
         },
         "S003": {
             "average": 100.0,
             "grade_count": 1,
             "percentile_rank": 100.0,
+            "rank": 1,
         },
     }
 
@@ -272,6 +275,52 @@ def test_write_json_report_accepts_string_path(
     write_json_report(build_grade_report(sample_grades), str(output_path))
 
     assert output_path.exists()
+
+
+def test_students_with_equal_averages_share_a_competition_rank() -> None:
+    grades = [
+        Grade("S001", "CS101", 90.0, "2026-S1"),
+        Grade("S002", "CS101", 90.0, "2026-S1"),
+        Grade("S003", "CS101", 80.0, "2026-S1"),
+    ]
+
+    performance = build_grade_report(grades)["student_performance"]
+
+    assert [performance[s]["rank"] for s in ("S001", "S002", "S003")] == [1, 1, 3]
+
+
+def test_top_performers_lists_the_three_highest_ranked_students() -> None:
+    grades = [
+        Grade("S001", "CS101", 70.0, "2026-S1"),
+        Grade("S002", "CS101", 95.0, "2026-S1"),
+        Grade("S003", "CS101", 85.0, "2026-S1"),
+        Grade("S004", "CS101", 90.0, "2026-S1"),
+    ]
+
+    assert build_grade_report(grades)["top_performers"] == [
+        {"student_id": "S002", "average": 95.0, "rank": 1},
+        {"student_id": "S004", "average": 90.0, "rank": 2},
+        {"student_id": "S003", "average": 85.0, "rank": 3},
+    ]
+
+
+def test_top_performers_include_students_tied_at_the_cut_off() -> None:
+    grades = [
+        Grade("S001", "CS101", 95.0, "2026-S1"),
+        Grade("S002", "CS101", 90.0, "2026-S1"),
+        Grade("S003", "CS101", 80.0, "2026-S1"),
+        Grade("S004", "CS101", 80.0, "2026-S1"),
+        Grade("S005", "CS101", 70.0, "2026-S1"),
+    ]
+
+    top_performers = build_grade_report(grades)["top_performers"]
+
+    assert [(item["student_id"], item["rank"]) for item in top_performers] == [
+        ("S001", 1),
+        ("S002", 2),
+        ("S003", 3),
+        ("S004", 3),
+    ]
 
 
 def test_group_sections_are_empty_without_student_profiles(

@@ -44,12 +44,24 @@ class _GroupAccumulator:
         return self.total / self.count
 
 
+TOP_PERFORMER_LIMIT = 3
+
+
 class StudentPerformance(TypedDict):
     """Summarize an individual student's recorded grades."""
 
     average: float
     grade_count: int
     percentile_rank: float
+    rank: int
+
+
+class TopPerformer(TypedDict):
+    """Identify one of the highest-ranked students."""
+
+    student_id: str
+    average: float
+    rank: int
 
 
 class DatasetOverview(TypedDict):
@@ -98,6 +110,7 @@ class GradeReport(TypedDict):
     modes: list[float]
     grade_distribution: dict[str, int]
     student_performance: dict[str, StudentPerformance]
+    top_performers: list[TopPerformer]
     semester_trends: list[SemesterTrend]
     dataset_overview: DatasetOverview
     pass_fail: PassFailSummary
@@ -108,6 +121,33 @@ class GradeReport(TypedDict):
 
 
 GroupKey = TypeVar("GroupKey", str, int)
+
+
+def _competition_ranks(
+    scores_by_student: Mapping[str, _GroupAccumulator],
+) -> dict[str, int]:
+    """Rank students by actual average, highest first.
+
+    Students with equal averages share a competition rank, so three students
+    with averages 90, 90 and 80 are ranked 1, 1 and 3. Ties are listed by
+    student ID. The returned dictionary is in rank order.
+    """
+    ranked_students = sorted(
+        scores_by_student.items(),
+        key=lambda item: (-item[1].average, item[0]),
+    )
+
+    ranks: dict[str, int] = {}
+    previous_average: float | None = None
+    previous_rank = 0
+
+    for position, (student_id, accumulator) in enumerate(ranked_students, start=1):
+        rank = previous_rank if accumulator.average == previous_average else position
+        ranks[student_id] = rank
+        previous_average = accumulator.average
+        previous_rank = rank
+
+    return ranks
 
 
 def _summarize_student_groups(
@@ -188,6 +228,7 @@ def build_grade_report(
     student_averages = sorted(
         accumulator.average for accumulator in scores_by_student.values()
     )
+    ranks = _competition_ranks(scores_by_student)
 
     student_performance: dict[str, StudentPerformance] = {
         student_id: {
@@ -201,9 +242,20 @@ def build_grade_report(
                 / len(student_averages)
                 * 100
             ),
+            "rank": ranks[student_id],
         }
         for student_id, accumulator in sorted(scores_by_student.items())
     }
+
+    top_performers: list[TopPerformer] = [
+        {
+            "student_id": student_id,
+            "average": scores_by_student[student_id].average,
+            "rank": rank,
+        }
+        for student_id, rank in ranks.items()
+        if rank <= TOP_PERFORMER_LIMIT
+    ]
 
     failing_records = len(grades) - passing_records
     total_records = len(grades)
@@ -261,6 +313,7 @@ def build_grade_report(
         "modes": modes,
         "grade_distribution": grade_distribution,
         "student_performance": student_performance,
+        "top_performers": top_performers,
         "semester_trends": semester_trends,
         "dataset_overview": dataset_overview,
         "pass_fail": pass_fail,
