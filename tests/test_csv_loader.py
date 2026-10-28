@@ -1,6 +1,10 @@
+from collections.abc import Iterator
+from pathlib import Path
+
 import pytest
 
 from src.grade_analytics.csv_loader import (
+    iter_grades_from_csv,
     load_grades_from_csv,
     load_students_from_csv,
 )
@@ -230,3 +234,26 @@ def test_reject_students_row_with_extra_fields(tmp_path):
 
     with pytest.raises(ValueError, match="too many fields"):
         load_students_from_csv(csv_path)
+
+
+def test_iter_grades_from_csv_yields_records_one_at_a_time(tmp_path):
+    csv_path = tmp_path / "grades.csv"
+    csv_path.write_text(
+        "student_id,course_id,score,semester\n"
+        "S001,CS101,85,2026-S1\n"
+        "S002,CS102,not-a-score,2026-S1\n",
+        encoding="utf-8",
+    )
+
+    records = iter_grades_from_csv(csv_path)
+
+    assert isinstance(records, Iterator)
+    assert next(records) == Grade("S001", "CS101", 85.0, "2026-S1")
+    with pytest.raises(ValueError, match="Invalid score on row 3"):
+        next(records)
+
+
+def test_iter_grades_matches_list_loader_on_sample_data():
+    sample_csv = Path(__file__).resolve().parent.parent / "data" / "grades.csv"
+
+    assert list(iter_grades_from_csv(sample_csv)) == load_grades_from_csv(sample_csv)

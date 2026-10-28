@@ -1,5 +1,5 @@
 import csv
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 
 from src.grade_analytics.models import Grade, Student
@@ -59,7 +59,21 @@ def load_grades_from_csv(file_path: str | Path) -> list[Grade]:
         FileNotFoundError: If the file does not exist.
         ValueError: If headers or row data are invalid.
     """
-    grades: list[Grade] = []
+    return list(iter_grades_from_csv(file_path))
+
+
+def iter_grades_from_csv(file_path: str | Path) -> Iterator[Grade]:
+    """Yield validated grade records from a CSV file one row at a time.
+
+    Only the current row is held in memory, so large files can be processed
+    without building a full list. The file stays open until the generator is
+    exhausted or closed.
+
+    Raises:
+        FileNotFoundError: If the file does not exist (when iteration starts).
+        ValueError: If headers or row data are invalid (when that row is
+            reached).
+    """
     path = Path(file_path)
 
     with path.open("r", encoding="utf-8-sig", newline="") as csv_file:
@@ -97,11 +111,9 @@ def load_grades_from_csv(file_path: str | Path) -> list[Grade]:
                         f"Invalid {kind} on row {row_number}: {error}"
                     ) from error
 
-                grades.append(grade)
+                yield grade
         except csv.Error as error:
             raise ValueError(f"Malformed CSV data: {error}") from error
-
-    return grades
 
 
 def load_students_from_csv(file_path: str | Path) -> list[Student]:
