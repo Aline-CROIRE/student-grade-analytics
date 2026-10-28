@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.grade_analytics.json_report import GradeReport
+from src.grade_analytics.json_report import GradeReport, GroupPerformance
 from src.grade_analytics.semester_trends import DEFAULT_TREND_WINDOW
 
 WIDTH = 76
@@ -24,6 +24,24 @@ def print_workspace_menu(source_name: str, period_label: str) -> None:
     print("  3. Choose another CSV file")
     print("  4. Exit")
     print()
+
+
+def _format_group_rows(
+    label: str,
+    groups: dict[str, GroupPerformance],
+) -> list[str]:
+    """Format one table of student-group results, such as majors or years."""
+    rows = [f"{label:<26}{'Students':>12}{'Grades':>12}{'Average':>14}"]
+
+    for name, result in groups.items():
+        rows.append(
+            f"{name:<26}"
+            f"{result['student_count']:>12}"
+            f"{result['grade_count']:>12}"
+            f"{result['average']:>13.2f}%"
+        )
+
+    return rows
 
 
 def format_report_text(report: GradeReport, period_label: str) -> str:
@@ -163,7 +181,30 @@ def format_report_text(report: GradeReport, period_label: str) -> str:
             f"{course_result['failing_records']:>12}"
         )
 
-    lines.extend(["", "7. SEMESTER TRENDS"])
+    lines.extend(["", "7. PERFORMANCE BY MAJOR AND YEAR"])
+
+    if report["major_performance"] or report["year_performance"]:
+        lines.extend(_format_group_rows("Major", report["major_performance"]))
+        lines.append("")
+        lines.extend(
+            _format_group_rows(
+                "Year of study",
+                {
+                    f"Year {year}": result
+                    for year, result in report["year_performance"].items()
+                },
+            )
+        )
+        lines.append(
+            "Group averages include every grade record of the group's students."
+        )
+    else:
+        lines.append(
+            "No student profiles were provided, so major and year groups "
+            "are not available."
+        )
+
+    lines.extend(["", "8. SEMESTER TRENDS"])
 
     if report["semester_trends"]:
         lines.append(
@@ -213,7 +254,7 @@ def format_report_text(report: GradeReport, period_label: str) -> str:
     else:
         lines.append("No semester trend data is available.")
 
-    lines.extend(["", "8. MOST FREQUENT SCORES"])
+    lines.extend(["", "9. MOST FREQUENT SCORES"])
 
     modes = report["modes"]
 
@@ -226,13 +267,13 @@ def format_report_text(report: GradeReport, period_label: str) -> str:
             "Most frequent score(s): " + ", ".join(f"{score:g}" for score in modes)
         )
 
-    lines.extend(["", "9. KEY FINDINGS"])
+    lines.extend(["", "10. KEY FINDINGS"])
     lines.extend(f"- {insight}" for insight in report["insights"])
 
     lines.extend(
         [
             "",
-            "10. DATA AND INTERPRETATION LIMITATIONS",
+            "11. DATA AND INTERPRETATION LIMITATIONS",
             "- Results describe only the records in the selected CSV and period.",
             "- Missing records or unequal course loads may affect comparisons.",
             "- Course IDs are shown because course names are not provided.",
