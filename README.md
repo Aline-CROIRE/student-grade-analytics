@@ -1,548 +1,235 @@
 ﻿# Student Grade Analytics Tool
 
-A Python-based command-line application for analyzing student grades, generating statistical reports, comparing academic performance across semesters, and exporting results to JSON and text files.
+A command-line tool that reads student grades from a CSV file, works out the
+statistics that matter (averages, distributions, rankings, semester trends),
+shows them in a terminal dashboard, and saves the results as a JSON report.
 
-The project demonstrates Python's advanced collection types, data classes, type hints, file handling, error handling, testing, and clean-code practices.
+It was built for the Python Advanced lab, so it leans on the standard
+library's collections, dataclasses, and type hints rather than third-party
+packages.
 
-## Table of Contents
+## Setup
 
-- [Overview](#overview)
-- [Features](#features)
-- [Technologies](#technologies)
-- [Project Structure](#project-structure)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Running the Application](#running-the-application)
-- [Input Data Format](#input-data-format)
-- [Analytics and Reports](#analytics-and-reports)
-- [Advanced Collections](#advanced-collections)
-- [Data Models and Type Safety](#data-models-and-type-safety)
-- [File Handling and Error Handling](#file-handling-and-error-handling)
-- [Testing and Code Quality](#testing-and-code-quality)
-- [Performance and Complexity](#performance-and-complexity)
-- [Sample Results](#sample-results)
-- [Screenshot](#screenshot)
-- [Limitations](#limitations)
-- [Future Improvements](#future-improvements)
+You need **Python 3.11 or newer**. The file picker uses Tkinter, which comes
+with the standard Python installers for Windows and macOS. On Linux you may
+need to install it separately (for example `sudo apt install python3-tk`).
 
-## Overview
-
-The Student Grade Analytics Tool loads grade records from a CSV file and calculates useful statistics about academic performance. Users can analyze the entire dataset or select a supported academic year or semester, view results in a terminal dashboard, and export reports.
-
-The application separates its data models, analytics functions, collection utilities, reporting logic, and terminal interface into modules to improve readability, maintainability, and testability.
-
-## Features
-
-- Load student grade records from CSV files.
-- Calculate the mean, median, minimum, maximum, and other descriptive statistics.
-- Calculate grade distributions and identify the most frequent grades.
-- Calculate student averages, rankings, and percentile ranks.
-- Compare academic performance across semesters and identify changes in average scores.
-- Summarize pass and fail results.
-- Use an interactive terminal dashboard to review analytics.
-- Export reports as JSON and text files.
-- Select a CSV file using the native file picker.
-- Handle invalid input and file-related errors.
-- Test the application using automated tests.
-- Check code formatting, linting, type correctness, and test coverage.
-
-## Technologies
-
-- **Python 3.11+** — application logic and data processing.
-- **CSV and JSON** — input data and report export.
-- **`collections`** — `Counter`, `defaultdict`, `OrderedDict`, and `deque`.
-- **`dataclasses` and `namedtuple`** — structured data representation.
-- **`TypedDict` and type hints** — clearer data contracts and static type checking.
-- **pytest** — automated testing.
-- **Black** — code formatting.
-- **Ruff** — linting and code-quality checks.
-- **mypy** — static type checking.
-- **coverage.py** — test coverage measurement.
-- **Git and GitHub** — version control and project hosting.
-
-## Project Structure
-
-```text
-student-grade-analytics/
-├── data/
-│   └── grades.csv
-├── docs/
-│   └── images/
-│       └── StudentGradeAnalytics.png
-├── src/
-│   └── grade_analytics/
-│       ├── __init__.py
-│       ├── analytics.py
-│       ├── collections_utils.py
-│       ├── json_report.py
-│       ├── models.py
-│       ├── semester_trends.py
-│       └── terminal_ui.py
-├── tests/
-│   ├── test_analytics.py
-│   ├── test_collections_utils.py
-│   ├── test_json_report.py
-│   ├── test_models.py
-│   ├── test_semester_trends.py
-│   └── ...
-├── main.py
-├── requirements.txt
-└── README.md
-```
-
-The tree above illustrates the intended organization. The exact files inside `tests/` and the documentation directory may differ as the project evolves.
-
-### Main components
-
-| File | Responsibility |
-|---|---|
-| `main.py` | Starts the application and manages the interactive workflow. |
-| `models.py` | Defines structured data models for students, courses, and grades. |
-| `analytics.py` | Calculates grade statistics, modes, and percentile ranks. |
-| `collections_utils.py` | Provides utilities demonstrating advanced collections and grouping operations. |
-| `semester_trends.py` | Calculates and compares semester-level performance. |
-| `json_report.py` | Builds structured analytics reports and exports JSON. |
-| `terminal_ui.py` | Displays the dashboard and generates text reports. |
-| `tests/` | Contains automated tests for application behavior. |
-| `data/grades.csv` | Provides sample grade records. |
-
-## Requirements
-
-- Python 3.11 or newer.
-- pip.
-- Git, if you want to clone the repository.
-- A terminal such as PowerShell on Windows.
-- The Python dependencies listed in `requirements.txt`.
-
-## Installation
-
-### 1. Clone the repository
-
-```bash
+```powershell
 git clone https://github.com/Aline-CROIRE/student-grade-analytics.git
 cd student-grade-analytics
-```
 
-### 2. Create a virtual environment
-
-On Windows PowerShell:
-
-```powershell
 python -m venv .venv
-```
+.\.venv\Scripts\Activate.ps1        # macOS/Linux: source .venv/bin/activate
 
-### 3. Activate the virtual environment
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-If PowerShell blocks activation, consult your system's execution-policy settings or activate the environment using an alternative supported by your setup.
-
-### 4. Install dependencies
-
-```powershell
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-If you intend to run all development checks, make sure pytest, Black, Ruff, mypy, and coverage.py are installed. They may be declared in `requirements.txt` or managed separately as development dependencies.
+`requirements.txt` only contains development tools (pytest, mypy, Ruff, Black,
+coverage). The tool itself has no third-party dependencies.
 
-## Running the Application
-
-From the project root, activate the virtual environment and run:
+## Running the tool
 
 ```powershell
 python main.py
 ```
 
-Follow the interactive prompts to select the input CSV file and choose an analysis period.
+1. A file picker opens. Choose a grades CSV, such as `data/grades.csv`.
+2. If a `students.csv` file sits in the same folder, it is loaded too and
+   the report adds performance by major and year of study.
+3. Pick what to analyse: the whole dataset, one academic year, or one
+   semester.
+4. Read the dashboard, then choose to export, analyse another period, open
+   another file, or exit.
 
-Depending on the available dataset and selected period, the application can display analytics, export reports, analyze another period, select another CSV file, or exit.
+Exports are saved to `reports/<csv name>_<period>_report.json`, with a
+matching `.txt` copy of the dashboard. If a report already exists, the tool
+asks before replacing it.
 
-### Exporting reports
+## Sample input
 
-Use the application's workspace menu to select the appropriate export option.
-
-- **JSON export:** produces a structured report suitable for other programs to consume.
-- **Text export:** produces a readable report for viewing or sharing.
-
-The exact export location and filename depend on the application's current implementation and selected options.
-
-## Input Data Format
-
-The sample dataset is stored in `data/grades.csv`.
-
-Each row represents a grade record associated with a student, course, score, and academic period. The file uses a header row.
-
-Example:
+`data/grades.csv` has one row per grade. Semesters use the `YYYY-S1` or
+`YYYY-S2` format, and scores must be between 0 and 100.
 
 ```csv
 student_id,course_id,score,semester
-S001,C101,85,S1
-S002,C101,65,S1
-S003,C101,90,S1
-S001,C102,85,S2
-S002,C102,65,S2
+S001,CS101,80,2026-S1
+S001,CS102,90,2026-S1
+S002,CS101,60,2026-S1
+S002,CS102,70,2026-S2
+S003,CS101,100,2026-S2
 ```
 
-This is an illustrative example of the expected data shape. Use the actual column names and accepted values defined by the CSV-loading implementation when preparing additional files.
+`data/students.csv` is optional and has one row per student:
 
-### Data considerations
-
-- Scores should be valid numeric values within the range supported by the application.
-- Student and course identifiers should be consistent across records.
-- Academic-period values should follow the format expected by the application.
-- Missing, malformed, or invalid records should be handled according to the application's validation and error-handling rules.
-
-The current sample dataset contains 10 grade records. It identifies students and courses by IDs; it does not provide student names, course names, or course credits.
-
-## Analytics and Reports
-
-The application provides several views of academic performance.
-
-### Descriptive statistics
-
-Grade statistics include:
-
-- Mean (average).
-- Median.
-- Minimum score.
-- Maximum score.
-- Grade distribution.
-- Most frequent grade categories.
-
-### Student performance
-
-The report can calculate student averages, rank students, and compare performance using percentile ranks.
-
-A student's average is calculated from the available grade records for that student in the selected analysis.
-
-### Semester trends
-
-Semester trend analysis summarizes average scores by semester and compares each semester with the preceding recorded semester.
-
-Changes in average scores are expressed in **percentage points**, not as relative percentage growth.
-
-### Pass and fail analysis
-
-The project's configured passing threshold is 60.
-
-Grade categories use the following project-defined boundaries:
-
-| Category | Score range |
-|---|---:|
-| A | 90–100 |
-| B | 80–less than 90 |
-| C | 70–less than 80 |
-| D | 60–less than 70 |
-| F | 0–less than 60 |
-
-These boundaries are assumptions for this project, not universal academic standards.
-
-Record-level pass rates count individual grade records. Student pass counts evaluate each student's average across the available records in the selected analysis. These are different measurements and should not be interpreted as interchangeable.
-
-### Rankings and percentiles
-
-Student rankings use calculated averages rather than values rounded for display. Students with equal actual averages share a competition rank; for example, ranks may be `1, 1, 3`.
-
-Displayed averages are formatted to two decimal places.
-
-Percentile calculations follow the implementation's less-than-or-equal convention: the percentile represents the percentage of compared values less than or equal to the value being evaluated.
-
-## Advanced Collections
-
-The project demonstrates Python's advanced collection types and their appropriate use cases.
-
-### `Counter`
-
-`Counter` counts occurrences of items in an iterable.
-
-In this project, it is useful for summarizing grade categories and identifying frequently occurring values.
-
-```python
-from collections import Counter
-
-grades = ["A", "B", "A", "C", "B", "A"]
-distribution = Counter(grades)
-
-print(distribution)
-# Counter({'A': 3, 'B': 2, 'C': 1})
+```csv
+student_id,name,major,year
+S001,Alice,Computing,2
+S002,Brian,Engineering,1
+S003,Chloe,Computing,3
 ```
 
-### `defaultdict`
+Invalid files are rejected with a message that names the problem and the row,
+for example `Invalid semester on row 2: Invalid semester 'S1'; expected
+format YYYY-S1 or YYYY-S2`. A missing file, a file you are not allowed to
+read, or a malformed CSV is reported the same way, and you can pick another
+file.
 
-`defaultdict` automatically creates a default value when a missing key is accessed.
+## Sample output
 
-It is useful for grouping records by student, course, or academic period without manually initializing each group.
+Part of the dashboard for the full sample dataset:
 
-```python
-from collections import defaultdict
+```text
+5. STUDENT RANKINGS
+Rank    Student ID               Average    Percentile    Grades
+1       S003                      92.50%       100.00%         2
+2       S005                      91.50%        80.00%         2
+3       S001                      85.00%        60.00%         2
+4       S002                      65.00%        40.00%         2
+4       S004                      65.00%        40.00%         2
 
-grades_by_student = defaultdict(list)
+7. PERFORMANCE BY MAJOR AND YEAR
+Major                         Students      Grades       Average
+Business                             1           2        65.00%
+Computing                            2           4        88.75%
+Engineering                          2           4        78.25%
 
-grades_by_student["S001"].append(85)
-grades_by_student["S001"].append(90)
-
-print(grades_by_student["S001"])
-# [85, 90]
+8. SEMESTER TRENDS
+Semester           Average   Rolling avg          Change     Direction
+2026-S1             76.00%        76.00%             N/A      Baseline
+2026-S2             83.60%        79.80%        +7.60 pp      Improved
 ```
 
-### `OrderedDict`
+Students with the same average share a rank. Grades are A (90+), B (80+),
+C (70+), D (60+) and F (below 60), and 60 is the pass mark.
 
-`OrderedDict` maintains insertion order and offers additional order-specific operations beyond a regular dictionary.
+![Terminal dashboard running on the sample data](docs/images/StudentGradeAnalytics.png)
 
-It can be used when a report needs an explicitly ordered mapping of results.
+## JSON report example
 
-Modern Python dictionaries also preserve insertion order, so `OrderedDict` should be used when its additional behavior or explicit semantics are useful.
+An excerpt of `reports/grades_entire_dataset_report.json` for the sample
+data. Some sections are shortened here; the real file lists every student,
+course and group.
 
-### `deque`
-
-`deque` is a double-ended queue designed for efficient additions and removals at either end.
-
-It is useful for maintaining a rolling window of recent values or other queue-like workflows.
-
-```python
-from collections import deque
-
-recent_scores = deque([70, 75, 80], maxlen=3)
-recent_scores.append(85)
-
-print(recent_scores)
-# deque([75, 80, 85], maxlen=3)
+```json
+{
+  "summary": {
+    "count": 10,
+    "mean": 79.8,
+    "median": 82.5,
+    "minimum": 55.0,
+    "maximum": 100.0
+  },
+  "modes": [],
+  "mode_frequency": 1,
+  "grade_distribution": { "A": 3, "B": 3, "C": 2, "D": 1, "F": 1 },
+  "student_performance": {
+    "S003": { "average": 92.5, "grade_count": 2, "percentile_rank": 100.0, "rank": 1 }
+  },
+  "top_performers": [
+    { "student_id": "S003", "average": 92.5, "rank": 1 },
+    { "student_id": "S005", "average": 91.5, "rank": 2 },
+    { "student_id": "S001", "average": 85.0, "rank": 3 }
+  ],
+  "semester_trends": [
+    { "semester": "2026-S1", "average": 76.0, "change": null, "rolling_average": 76.0 },
+    { "semester": "2026-S2", "average": 83.6, "change": 7.6, "rolling_average": 79.8 }
+  ],
+  "major_performance": {
+    "Computing": { "student_count": 2, "grade_count": 4, "average": 88.75 }
+  },
+  "insights": [
+    "The average score is 79.80%, above the 60% passing threshold.",
+    "Top performer: S003 with a 92.50% average.",
+    "The average increased by 7.60 percentage points in 2026-S2 compared with the previous recorded semester."
+  ]
+}
 ```
 
-### `namedtuple`
+The full report also includes `dataset_overview`, `pass_fail`,
+`course_performance` and `year_performance`. Its structure is defined by the
+`GradeReport` TypedDict in `src/grade_analytics/json_report.py`, and numbers
+are rounded to two decimal places.
 
-A `namedtuple` provides tuple-like records whose fields can be accessed by name.
+## Collection performance notes
 
-It is useful for lightweight, immutable record structures.
-
-### Grouping utilities
-
-The project also includes helper functions for grouping student objects by attributes such as major or academic year. These utilities require student objects that contain the relevant attributes; those attributes are not present in the current sample CSV schema.
-
-## Data Models and Type Safety
-
-### Dataclasses
-
-Dataclasses reduce repetitive code when defining classes that primarily store data.
-
-The project uses data models such as `Student`, `Course`, and `Grade` to represent domain entities clearly.
-
-### Type hints
-
-Type hints document expected inputs and outputs, making functions easier to understand and enabling static analysis.
-
-The project uses typed collections, optional values, union types, and structured report types where appropriate.
-
-### `TypedDict`
-
-`TypedDict` defines the expected keys and value types of dictionary-shaped data. It is useful for describing the structure of exported reports without requiring every report to be represented by a separate class.
-
-### Separation of responsibilities
-
-Keeping models, analytics, reporting, collection utilities, and the terminal interface in separate modules helps make the project easier to test and maintain.
-
-## File Handling and Error Handling
-
-The application reads grade data from CSV files and exports reports as JSON or text.
-
-Context managers are used for file operations so that file resources are closed reliably after use.
-
-The report generation process uses structured dictionaries and JSON serialization rather than manually constructing JSON strings.
-
-Error handling should give useful feedback for situations such as:
-
-- A file cannot be found or opened.
-- A CSV file is malformed.
-- Input data contains invalid values.
-- A report cannot be written to the selected destination.
-- A user cancels file selection or chooses an unsupported input.
-
-## Testing and Code Quality
-
-The project uses automated tests and static quality tools to improve reliability and maintainability.
-
-Run the following commands from the project root with the virtual environment activated.
-
-### Run tests
-
-```powershell
-python -m pytest -q
-```
-
-For verbose output:
-
-```powershell
-python -m pytest -v
-```
-
-### Check formatting
-
-```powershell
-python -m black --check main.py src tests
-```
-
-To format files when needed:
-
-```powershell
-python -m black main.py src tests
-```
-
-### Run linting
-
-```powershell
-python -m ruff check main.py src tests
-```
-
-Apply supported automatic fixes when appropriate:
-
-```powershell
-python -m ruff check main.py src tests --fix
-```
-
-Review changes after automatic fixes.
-
-### Run static type checking
-
-```powershell
-python -m mypy src main.py
-```
-
-### Measure test coverage
-
-Run tests with branch coverage:
-
-```powershell
-python -m coverage run --branch -m pytest
-```
-
-Generate a coverage report:
-
-```powershell
-python -m coverage report -m
-```
-
-A coverage percentage describes which measured code was exercised by the tests. It does not, by itself, prove that every behavior is correct.
-
-### Check whitespace and patch formatting
-
-```powershell
-git diff --check
-```
-
-Run the tests and quality checks after making changes, and review the output before committing.
-
-## Performance and Complexity
-
-Let:
-
-- \(N\) be the number of grade records.
-- \(S\) be the number of distinct students.
-- \(C\) be the number of distinct courses.
-- \(T\) be the number of academic periods.
-
-The current application loads and retains the grade records in memory. Its report aggregation and sorting work depends on the dataset size and the number of distinct students, courses, and periods.
-
-A useful high-level estimate for the report-processing workflow is:
-
-\[
-O(N\log N + S\log S + C\log C + T\log T)
-\]
-
-This is a high-level estimate for the implemented aggregation and sorting workflow, not a formal guarantee for every individual function. Individual operations may have different costs.
-
-The auxiliary data structures used by the report can require memory proportional to the grade records and the distinct entities being summarized. Since the application retains the dataset, its overall memory use is not constant with respect to input size.
-
-### Collection performance considerations
-
-| Collection | Appropriate use | Performance consideration |
+| Collection | Where it is used | Why |
 |---|---|---|
-| `Counter` | Counting occurrences | Efficient frequency counting for hashable values. |
-| `defaultdict` | Grouping records | Avoids repeated manual initialization of grouped values. |
-| `OrderedDict` | Explicit ordered mappings | Provides order-specific operations; a regular dictionary is sufficient for many ordered mappings. |
-| `deque` | Queue and rolling-window operations | Efficient additions and removals at either end; accessing arbitrary middle elements is slower than indexing a list. |
-| `namedtuple` | Lightweight records | Compact, immutable, tuple-like representation. |
-| `dataclass` | Domain models | Improves clarity and reduces boilerplate, though memory usage depends on its configuration and fields. |
+| `Counter` | Grade distribution and most frequent scores | Counts in one pass |
+| `defaultdict` | Grouping grades by student and course, and students by major and year | No need to check whether a group exists first |
+| `OrderedDict` | Grade distribution in A–F order | Keeps the report order fixed |
+| `deque(maxlen=n)` | Rolling average of semester averages | Old values drop off automatically, and adding is O(1) |
+| `namedtuple` / `dataclass` | `GradeSummary`, and the `Student`, `Course` and `Grade` models | Named fields instead of loose dictionaries |
 
-These are qualitative comparisons rather than benchmark results. No measured runtime or memory benchmark figures are claimed here.
+### Measured memory use
 
-### Possible memory improvement
+To compare these choices with real numbers, run:
 
-For datasets that are too large to fit comfortably in memory, a future version could process CSV records incrementally and update running aggregates instead of retaining every grade record. That approach would require carefully redesigning operations that depend on sorting, exact medians, rankings, or full-record access.
+```powershell
+python -m src.grade_analytics.memory_comparison
+```
 
-## Sample Results
+It uses `tracemalloc` to measure 100,000 grade records held in different
+ways. These are the results on Python 3.14.8 (Windows):
 
-For the current sample dataset of 10 grade records, the previously verified overall statistics include:
+| Storage | Total | Bytes per record |
+|---|---:|---:|
+| `dataclass(slots=True)` | 7,032 KiB | 72 |
+| `tuple` | 8,595 KiB | 88 |
+| `namedtuple` | 9,376 KiB | 96 |
+| `dataclass` | 10,941 KiB | 112 |
+| `dict` | 18,749 KiB | 192 |
 
-| Metric | Result |
-|---|---:|
-| Number of grade records | 10 |
-| Overall average | 79.8 |
-| Median | 82.5 |
-| Highest score | 100 |
-| Lowest score | 55 |
+For a rolling average, a `deque(maxlen=5)` stayed at about 1.3 KiB after
+receiving 100,000 scores, while a list keeping every score used 781 KiB.
 
-The observed grade distribution is:
+What this means in practice:
 
-| Category | Count |
-|---|---:|
-| A | 3 |
-| B | 3 |
-| C | 2 |
-| D | 1 |
-| F | 1 |
+- Dictionaries are the most flexible but cost about 2.7 times as much as a
+  slotted dataclass. Typed models are smaller and easier to check.
+- `slots=True` removes the per-object `__dict__`, which saves about a third
+  compared with a normal dataclass.
+- When you only need the latest few values, a bounded `deque` keeps memory
+  flat no matter how much data arrives.
+- For large files, `iter_grades_from_csv()` is a generator that yields one
+  validated record at a time instead of building the whole list.
 
-The previously calculated semester averages are:
+Building the report makes a few passes over the grades, so it runs in
+O(N log N) time (sorting for the median and rankings) and uses O(N) memory.
 
-| Semester | Average |
-|---|---:|
-| S1 | 76.0 |
-| S2 | 83.6 |
+## Running the tests
 
-The difference between the two semester averages is **+7.6 percentage points**.
+```powershell
+pytest
+```
 
-These values describe the current sample dataset. Results will change when the input records or selected analysis period change.
+The test suite covers every collection type, the calculations, CSV
+validation, the JSON export, the dashboard, and the shipped sample data.
+To run the code-quality checks as well:
 
-## Screenshot
+```powershell
+ruff check .
+black --check .
+mypy src main.py
+```
 
-The screenshot below illustrates the application's terminal dashboard.
+## Project structure
 
-Save the screenshot in `docs/images/StudentGradeAnalytics.png` before publishing this section.
-
-![Student Grade Analytics dashboard](docs/images/StudentGradeAnalytics.png)
-
-If the image does not appear on GitHub, confirm that the file exists at that exact path and has been committed to the repository.
-
-## Limitations
-
-- The supplied dataset is small and intended for demonstration.
-- Records use student and course IDs rather than descriptive names.
-- The current CSV schema does not include student majors, academic years as student attributes, or course credits.
-- The application retains grade records in memory rather than implementing a fully streaming analytics pipeline.
-- Performance notes are based on algorithmic considerations, not measured benchmarks.
-- Grade boundaries and pass thresholds are configurable project assumptions only if the implementation explicitly supports changing them; otherwise, they are fixed project rules.
-
-## Future Improvements
-
-Potential enhancements include:
-
-- Add configurable grade boundaries and pass thresholds.
-- Add student names, course names, credits, and additional academic metadata.
-- Support larger datasets with incremental processing where practical.
-- Add measured time and memory benchmarks for different collection strategies.
-- Add more visual reporting options.
-- Improve validation messages for malformed CSV input.
-- Add export options for additional report formats.
-- Expand analytics with weighted averages and additional trend comparisons where the input schema supports them.
+```text
+data/                 sample grades.csv and students.csv
+docs/                 assignment brief, audit tracker, screenshot
+src/grade_analytics/
+  models.py           Student, Course and Grade dataclasses
+  csv_loader.py       CSV reading and validation (with a generator)
+  collections_utils.py  Counter, defaultdict, OrderedDict, deque helpers
+  analytics.py        mean, median, mode, percentiles
+  semester_trends.py  semester averages and rolling average
+  json_report.py      report building and JSON export
+  terminal_ui.py      dashboard and text export
+  memory_comparison.py  memory measurements
+tests/                pytest tests
+main.py               interactive application
+```
 
 ## Author
 
-**Aline NIYONIZERA**
-
-GitHub: [Aline-CROIRE](https://github.com/Aline-CROIRE)
-
----
-
-This project was developed as a practical exercise in advanced Python programming, collections, data processing, testing, and software quality practices.
+Aline NIYONIZERA ([Aline-CROIRE](https://github.com/Aline-CROIRE))
