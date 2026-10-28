@@ -3,10 +3,13 @@ from bisect import bisect_right
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from statistics import fmean, median
 from typing import TypedDict
 
-from src.grade_analytics.analytics import GradeStatistics
+from src.grade_analytics.analytics import (
+    GradeStatistics,
+    calculate_grade_modes,
+    calculate_grade_statistics,
+)
 from src.grade_analytics.collections_utils import create_ordered_grade_report
 from src.grade_analytics.grade_policy import (
     GRADE_CATEGORIES,
@@ -14,8 +17,10 @@ from src.grade_analytics.grade_policy import (
     grade_category,
 )
 from src.grade_analytics.models import Grade
-from src.grade_analytics.semester import semester_sort_key
-from src.grade_analytics.semester_trends import SemesterTrend
+from src.grade_analytics.semester_trends import (
+    SemesterTrend,
+    calculate_semester_trends,
+)
 
 
 @dataclass
@@ -98,8 +103,6 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
     if not grades:
         raise ValueError("at least one grade is required")
 
-    scores: list[float] = []
-    frequencies: Counter[float] = Counter()
     distribution_counts: Counter[str] = Counter()
 
     scores_by_student: defaultdict[str, _GroupAccumulator] = defaultdict(
@@ -108,35 +111,17 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
     scores_by_course: defaultdict[str, _GroupAccumulator] = defaultdict(
         _GroupAccumulator
     )
-    scores_by_semester: defaultdict[str, _GroupAccumulator] = defaultdict(
-        _GroupAccumulator
-    )
 
     passing_records = 0
 
     for grade in grades:
-        scores.append(grade.score)
-        frequencies[grade.score] += 1
         distribution_counts[grade_category(grade.score)] += 1
         scores_by_student[grade.student_id].add(grade.score)
         scores_by_course[grade.course_id].add(grade.score)
-        scores_by_semester[grade.semester].add(grade.score)
         passing_records += grade.score >= PASSING_SCORE
 
-    summary: GradeStatistics = {
-        "count": len(scores),
-        "mean": fmean(scores),
-        "median": median(scores),
-        "minimum": min(scores),
-        "maximum": max(scores),
-    }
-
-    highest_frequency = max(frequencies.values())
-    modes = sorted(
-        score
-        for score, frequency in frequencies.items()
-        if frequency == highest_frequency
-    )
+    summary: GradeStatistics = calculate_grade_statistics(grades)
+    modes = calculate_grade_modes(grades)
 
     grade_distribution = create_ordered_grade_report(
         distribution_counts,
@@ -184,24 +169,7 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
             "pass_rate": accumulator.passing_records / accumulator.count * 100,
         }
 
-    semester_trends: list[SemesterTrend] = []
-    previous_average: float | None = None
-
-    for semester in sorted(scores_by_semester, key=semester_sort_key):
-        average = scores_by_semester[semester].average
-
-        semester_trends.append(
-            {
-                "semester": semester,
-                "average": average,
-                "change": (
-                    None if previous_average is None else average - previous_average
-                ),
-            }
-        )
-
-        previous_average = average
-
+    semester_trends = calculate_semester_trends(grades)
     semesters = [trend["semester"] for trend in semester_trends]
 
     dataset_overview: DatasetOverview = {
@@ -346,8 +314,3 @@ def write_json_report(
     with path.open("w", encoding="utf-8") as report_file:
         json.dump(report, report_file, indent=2, allow_nan=False)
         report_file.write("\n")
-
-
-def _grade_category(score: float) -> str:
-    """Backward-compatible private wrapper around the shared grade policy."""
-    return grade_category(score)

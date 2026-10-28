@@ -10,8 +10,8 @@ GradeSummary = namedtuple(
 )
 
 
-class GradeReport(TypedDict):
-    """Define the structure of a grade report."""
+class StudentGradeReport(TypedDict):
+    """Define the structure of a single student's grade report."""
 
     student_id: str
     average_score: float
@@ -105,7 +105,7 @@ def create_grade_summary(
 def create_grade_report(
     student_id: str,
     scores: list[float],
-) -> GradeReport:
+) -> StudentGradeReport:
     """Create a dictionary report with a defined structure."""
     average = sum(scores) / len(scores) if scores else 0.0
 
