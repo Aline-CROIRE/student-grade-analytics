@@ -10,6 +10,7 @@ from src.grade_analytics.csv_loader import (
 from src.grade_analytics.json_report import (
     GradeReport,
     build_grade_report,
+    round_report_values,
     write_json_report,
 )
 
@@ -161,4 +162,7 @@ def test_sample_report_round_trips_through_json(
     write_json_report(sample_report, output_path)
 
     with output_path.open("r", encoding="utf-8") as report_file:
-        assert json.load(report_file) == sample_report
+        loaded_report = json.load(report_file)
+
+    assert loaded_report == round_report_values(sample_report)
+    assert loaded_report["semester_trends"][1]["change"] == 7.6

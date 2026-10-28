@@ -5,6 +5,7 @@ import pytest
 from src.grade_analytics.json_report import (
     PASSING_SCORE,
     build_grade_report,
+    round_report_values,
     write_json_report,
 )
 from src.grade_analytics.models import Grade, Student
@@ -242,9 +243,7 @@ def test_percentile_rank_is_serialized_in_json(
     write_json_report(report, output_path)
 
     loaded_report = json.loads(output_path.read_text(encoding="utf-8"))
-    assert loaded_report["student_performance"]["S001"][
-        "percentile_rank"
-    ] == pytest.approx(200 / 3)
+    assert loaded_report["student_performance"]["S001"]["percentile_rank"] == 66.67
 
 
 def test_build_grade_report_rejects_empty_grades() -> None:
@@ -264,7 +263,29 @@ def test_write_json_report_creates_valid_json(
     with output_path.open("r", encoding="utf-8") as report_file:
         loaded_report = json.load(report_file)
 
-    assert loaded_report == report
+    assert loaded_report == round_report_values(report)
+
+
+def test_round_report_values_rounds_nested_floats_without_changing_input() -> None:
+    report = {
+        "average": 230 / 3,
+        "trends": [{"change": 7.599999999999994}, {"change": -0.001}],
+        "count": 3,
+        "label": "S1",
+        "missing": None,
+    }
+
+    rounded = round_report_values(report)
+
+    assert rounded == {
+        "average": 76.67,
+        "trends": [{"change": 7.6}, {"change": 0.0}],
+        "count": 3,
+        "label": "S1",
+        "missing": None,
+    }
+    assert json.dumps(rounded["trends"]) == '[{"change": 7.6}, {"change": 0.0}]'
+    assert report["average"] == 230 / 3
 
 
 def test_write_json_report_accepts_string_path(

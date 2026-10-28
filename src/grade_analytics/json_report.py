@@ -45,6 +45,7 @@ class _GroupAccumulator:
 
 
 TOP_PERFORMER_LIMIT = 3
+JSON_DECIMAL_PLACES = 2
 
 
 class StudentPerformance(TypedDict):
@@ -434,17 +435,37 @@ def _build_insights(report: GradeReport) -> list[str]:
     return insights
 
 
+def round_report_values(value: object) -> object:
+    """Return a copy of value with every float rounded for JSON output.
+
+    Dictionaries and lists are copied recursively, other values are returned
+    unchanged. Adding 0.0 turns a rounded negative zero into 0.0.
+    """
+    if isinstance(value, float):
+        return round(value, JSON_DECIMAL_PLACES) + 0.0
+
+    if isinstance(value, dict):
+        return {key: round_report_values(item) for key, item in value.items()}
+
+    if isinstance(value, list):
+        return [round_report_values(item) for item in value]
+
+    return value
+
+
 def write_json_report(
     report: GradeReport,
     file_path: str | Path,
 ) -> None:
     """Write a grade report as readable JSON.
 
-    Parent directories are created when they do not already exist.
+    Floats are rounded to two decimal places in the file only; the report
+    passed in keeps full precision. Parent directories are created when they
+    do not already exist.
     """
     path = Path(file_path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     with path.open("w", encoding="utf-8") as report_file:
-        json.dump(report, report_file, indent=2, allow_nan=False)
+        json.dump(round_report_values(report), report_file, indent=2, allow_nan=False)
         report_file.write("\n")
