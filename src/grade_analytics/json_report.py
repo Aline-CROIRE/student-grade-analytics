@@ -314,8 +314,3 @@ def write_json_report(
     with path.open("w", encoding="utf-8") as report_file:
         json.dump(report, report_file, indent=2, allow_nan=False)
         report_file.write("\n")
-
-
-def _grade_category(score: float) -> str:
-    """Backward-compatible private wrapper around the shared grade policy."""
-    return grade_category(score)
