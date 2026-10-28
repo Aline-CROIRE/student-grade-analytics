@@ -7,7 +7,7 @@ from src.grade_analytics.json_report import (
     build_grade_report,
     write_json_report,
 )
-from src.grade_analytics.models import Grade
+from src.grade_analytics.models import Grade, Student
 
 
 @pytest.fixture
@@ -272,3 +272,63 @@ def test_write_json_report_accepts_string_path(
     write_json_report(build_grade_report(sample_grades), str(output_path))
 
     assert output_path.exists()
+
+
+def test_group_sections_are_empty_without_student_profiles(
+    sample_grades: list[Grade],
+) -> None:
+    report = build_grade_report(sample_grades)
+
+    assert report["major_performance"] == {}
+    assert report["year_performance"] == {}
+
+
+def test_report_groups_students_by_major_and_year(
+    sample_grades: list[Grade],
+) -> None:
+    students = [
+        Student("S001", "Alice", "Computing", 2),
+        Student("S002", "Brian", "Engineering", 2),
+        Student("S003", "Chloe", "Computing", 10),
+    ]
+
+    report = build_grade_report(sample_grades, students)
+
+    assert report["major_performance"] == {
+        "Computing": {"student_count": 2, "grade_count": 3, "average": 90.0},
+        "Engineering": {"student_count": 1, "grade_count": 2, "average": 65.0},
+    }
+    assert report["year_performance"] == {
+        "2": {"student_count": 2, "grade_count": 4, "average": 75.0},
+        "10": {"student_count": 1, "grade_count": 1, "average": 100.0},
+    }
+    assert list(report["year_performance"]) == ["2", "10"]
+
+
+def test_group_sections_only_count_students_with_selected_grades() -> None:
+    grades = [Grade("S001", "CS101", 80.0, "2026-S1")]
+    students = [
+        Student("S001", "Alice", "Computing", 2),
+        Student("S002", "Brian", "Engineering", 1),
+    ]
+
+    report = build_grade_report(grades, students)
+
+    assert report["major_performance"] == {
+        "Computing": {"student_count": 1, "grade_count": 1, "average": 80.0},
+    }
+    assert report["year_performance"] == {
+        "2": {"student_count": 1, "grade_count": 1, "average": 80.0},
+    }
+
+
+def test_grades_without_a_student_profile_are_left_out_of_groups() -> None:
+    grades = [
+        Grade("S001", "CS101", 80.0, "2026-S1"),
+        Grade("S999", "CS101", 40.0, "2026-S1"),
+    ]
+
+    report = build_grade_report(grades, [Student("S001", "Alice", "Computing", 2)])
+
+    assert report["major_performance"]["Computing"]["average"] == 80.0
+    assert report["summary"]["count"] == 2

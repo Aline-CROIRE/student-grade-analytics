@@ -1,22 +1,27 @@
 import json
 from bisect import bisect_right
 from collections import Counter, defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, TypeVar
 
 from src.grade_analytics.analytics import (
     GradeStatistics,
     calculate_grade_modes,
     calculate_grade_statistics,
 )
-from src.grade_analytics.collections_utils import create_ordered_grade_report
+from src.grade_analytics.collections_utils import (
+    create_ordered_grade_report,
+    group_students_by_major,
+    group_students_by_year,
+)
 from src.grade_analytics.grade_policy import (
     GRADE_CATEGORIES,
     PASSING_SCORE,
     grade_category,
 )
-from src.grade_analytics.models import Grade
+from src.grade_analytics.models import Grade, Student
 from src.grade_analytics.semester_trends import (
     SemesterTrend,
     calculate_semester_trends,
@@ -78,6 +83,14 @@ class CoursePerformance(TypedDict):
     pass_rate: float
 
 
+class GroupPerformance(TypedDict):
+    """Summarize the grades of a group of students, such as a major or year."""
+
+    student_count: int
+    grade_count: int
+    average: float
+
+
 class GradeReport(TypedDict):
     """Describe the complete grade analytics report."""
 
@@ -89,13 +102,55 @@ class GradeReport(TypedDict):
     dataset_overview: DatasetOverview
     pass_fail: PassFailSummary
     course_performance: dict[str, CoursePerformance]
+    major_performance: dict[str, GroupPerformance]
+    year_performance: dict[str, GroupPerformance]
     insights: list[str]
 
 
-def build_grade_report(grades: list[Grade]) -> GradeReport:
+GroupKey = TypeVar("GroupKey", str, int)
+
+
+def _summarize_student_groups(
+    groups: Mapping[GroupKey, list[Student]],
+    scores_by_student: Mapping[str, _GroupAccumulator],
+) -> dict[str, GroupPerformance]:
+    """Combine per-student scores into one summary per student group.
+
+    Only students with grades in the analysed records are counted, and groups
+    without any such students are left out. The average is taken over all of
+    the group's grade records.
+    """
+    performance: dict[str, GroupPerformance] = {}
+
+    for key in sorted(groups):
+        members = [
+            scores_by_student[student.student_id]
+            for student in groups[key]
+            if student.student_id in scores_by_student
+        ]
+
+        if not members:
+            continue
+
+        grade_count = sum(member.count for member in members)
+        performance[str(key)] = {
+            "student_count": len(members),
+            "grade_count": grade_count,
+            "average": sum(member.total for member in members) / grade_count,
+        }
+
+    return performance
+
+
+def build_grade_report(
+    grades: list[Grade],
+    students: list[Student] | None = None,
+) -> GradeReport:
     """Build a comprehensive report from grade records.
 
-    Scores of 60 or higher count as passing by default.
+    Scores of 60 or higher count as passing by default. When student profiles
+    are provided, the report also summarizes performance by major and by year
+    of study; otherwise those sections are empty.
 
     Raises:
         ValueError: If no grade records are provided.
@@ -169,6 +224,16 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
             "pass_rate": accumulator.passing_records / accumulator.count * 100,
         }
 
+    profiles = students or []
+    major_performance = _summarize_student_groups(
+        group_students_by_major(profiles),
+        scores_by_student,
+    )
+    year_performance = _summarize_student_groups(
+        group_students_by_year(profiles),
+        scores_by_student,
+    )
+
     semester_trends = calculate_semester_trends(grades)
     semesters = [trend["semester"] for trend in semester_trends]
 
@@ -200,6 +265,8 @@ def build_grade_report(grades: list[Grade]) -> GradeReport:
         "dataset_overview": dataset_overview,
         "pass_fail": pass_fail,
         "course_performance": course_performance,
+        "major_performance": major_performance,
+        "year_performance": year_performance,
         "insights": [],
     }
 

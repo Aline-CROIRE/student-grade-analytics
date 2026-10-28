@@ -120,6 +120,32 @@ def test_sample_course_performance(sample_report: GradeReport) -> None:
     assert courses["CS102"]["failing_records"] == 0
 
 
+def test_sample_performance_by_major_and_year() -> None:
+    report = build_grade_report(
+        load_grades_from_csv(SAMPLE_CSV),
+        load_students_from_csv(SAMPLE_STUDENTS_CSV),
+    )
+
+    assert report["major_performance"] == {
+        "Business": {"student_count": 1, "grade_count": 2, "average": 65.0},
+        "Computing": {
+            "student_count": 2,
+            "grade_count": 4,
+            "average": pytest.approx(88.75),
+        },
+        "Engineering": {
+            "student_count": 2,
+            "grade_count": 4,
+            "average": pytest.approx(78.25),
+        },
+    }
+    assert report["year_performance"] == {
+        "1": {"student_count": 2, "grade_count": 4, "average": pytest.approx(65.0)},
+        "2": {"student_count": 2, "grade_count": 4, "average": pytest.approx(88.25)},
+        "3": {"student_count": 1, "grade_count": 2, "average": pytest.approx(92.5)},
+    }
+
+
 def test_sample_report_round_trips_through_json(
     tmp_path: Path,
     sample_report: GradeReport,
