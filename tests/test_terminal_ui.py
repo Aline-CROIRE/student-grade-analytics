@@ -116,3 +116,25 @@ def test_report_can_be_saved_as_readable_text(tmp_path) -> None:
     saved_text = output_path.read_text(encoding="utf-8")
     assert "STUDENT GRADE ANALYTICS REPORT" in saved_text
     assert "KEY FINDINGS" in saved_text
+
+
+def test_semester_trends_show_rolling_average() -> None:
+    grades = [
+        Grade("S001", "CS101", 80.0, "2026-S1"),
+        Grade("S002", "CS101", 70.0, "2026-S1"),
+        Grade("S001", "CS102", 90.0, "2026-S2"),
+        Grade("S002", "CS102", 100.0, "2026-S2"),
+    ]
+
+    text = format_report_text(build_grade_report(grades), "Entire dataset")
+    lines = text.splitlines()
+
+    header = next(line for line in lines if line.startswith("Semester  "))
+    s1_line = next(line for line in lines if line.startswith("2026-S1"))
+    s2_line = next(line for line in lines if line.startswith("2026-S2"))
+
+    assert "Rolling avg" in header
+    assert s1_line.split()[1:3] == ["75.00%", "75.00%"]
+    assert s2_line.split()[1:3] == ["95.00%", "85.00%"]
+    assert "mean of the most recent 2 semester averages" in text
+    assert all(len(line) <= 76 for line in (header, s1_line, s2_line))

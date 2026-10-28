@@ -61,6 +61,8 @@ def test_sample_semester_trends(sample_report: GradeReport) -> None:
     assert trends[0]["change"] is None
     assert trends[1]["average"] == pytest.approx(83.6)
     assert trends[1]["change"] == pytest.approx(7.6)
+    assert trends[0]["rolling_average"] == pytest.approx(76.0)
+    assert trends[1]["rolling_average"] == pytest.approx(79.8)
 
 
 def test_sample_pass_fail(sample_report: GradeReport) -> None:

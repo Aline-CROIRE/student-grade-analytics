@@ -27,16 +27,19 @@ def test_calculate_semester_averages(
             "semester": "2026-S1",
             "average": 70.0,
             "change": None,
+            "rolling_average": 70.0,
         },
         {
             "semester": "2026-S2",
             "average": 90.0,
             "change": 20.0,
+            "rolling_average": 80.0,
         },
         {
             "semester": "2027-S1",
             "average": 75.0,
             "change": -15.0,
+            "rolling_average": 82.5,
         },
     ]
 
@@ -98,5 +101,34 @@ def test_single_semester_has_no_change() -> None:
             "semester": "2026-S1",
             "average": 80.0,
             "change": None,
+            "rolling_average": 80.0,
         }
     ]
+
+
+@pytest.mark.parametrize(
+    ("window_size", "expected"),
+    [
+        (1, [70.0, 90.0, 75.0]),
+        (2, [70.0, 80.0, 82.5]),
+        (3, [70.0, 80.0, pytest.approx(235 / 3)]),
+        (10, [70.0, 80.0, pytest.approx(235 / 3)]),
+    ],
+)
+def test_rolling_average_respects_window_size(
+    sample_grades: list[Grade],
+    window_size: int,
+    expected: list[float],
+) -> None:
+    trends = calculate_semester_trends(sample_grades, window_size=window_size)
+
+    assert [trend["rolling_average"] for trend in trends] == expected
+
+
+@pytest.mark.parametrize("window_size", [0, -1])
+def test_semester_trends_reject_invalid_window_size(
+    sample_grades: list[Grade],
+    window_size: int,
+) -> None:
+    with pytest.raises(ValueError, match="Window size"):
+        calculate_semester_trends(sample_grades, window_size=window_size)
