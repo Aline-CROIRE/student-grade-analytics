@@ -357,6 +357,13 @@ def _build_insights(report: GradeReport) -> list[str]:
         ),
     ]
 
+    leaders = [item for item in report["top_performers"] if item["rank"] == 1]
+    label = "Top performer" if len(leaders) == 1 else "Top performers"
+    insights.append(
+        f"{label}: {', '.join(item['student_id'] for item in leaders)} "
+        f"with a {leaders[0]['average']:.2f}% average."
+    )
+
     largest_count = max(distribution.values())
     most_common_categories = [
         category for category, count in distribution.items() if count == largest_count

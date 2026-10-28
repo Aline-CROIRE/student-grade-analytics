@@ -277,6 +277,23 @@ def test_write_json_report_accepts_string_path(
     assert output_path.exists()
 
 
+def test_insights_name_the_top_performer(sample_grades: list[Grade]) -> None:
+    insights = build_grade_report(sample_grades)["insights"]
+
+    assert "Top performer: S003 with a 100.00% average." in insights
+
+
+def test_insights_name_every_student_tied_for_first() -> None:
+    grades = [
+        Grade("S001", "CS101", 90.0, "2026-S1"),
+        Grade("S002", "CS101", 90.0, "2026-S1"),
+    ]
+
+    insights = build_grade_report(grades)["insights"]
+
+    assert "Top performers: S001, S002 with a 90.00% average." in insights
+
+
 def test_students_with_equal_averages_share_a_competition_rank() -> None:
     grades = [
         Grade("S001", "CS101", 90.0, "2026-S1"),
