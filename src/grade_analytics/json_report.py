@@ -44,12 +44,25 @@ class _GroupAccumulator:
         return self.total / self.count
 
 
+TOP_PERFORMER_LIMIT = 3
+JSON_DECIMAL_PLACES = 2
+
+
 class StudentPerformance(TypedDict):
     """Summarize an individual student's recorded grades."""
 
     average: float
     grade_count: int
     percentile_rank: float
+    rank: int
+
+
+class TopPerformer(TypedDict):
+    """Identify one of the highest-ranked students."""
+
+    student_id: str
+    average: float
+    rank: int
 
 
 class DatasetOverview(TypedDict):
@@ -96,8 +109,10 @@ class GradeReport(TypedDict):
 
     summary: GradeStatistics
     modes: list[float]
+    mode_frequency: int
     grade_distribution: dict[str, int]
     student_performance: dict[str, StudentPerformance]
+    top_performers: list[TopPerformer]
     semester_trends: list[SemesterTrend]
     dataset_overview: DatasetOverview
     pass_fail: PassFailSummary
@@ -108,6 +123,33 @@ class GradeReport(TypedDict):
 
 
 GroupKey = TypeVar("GroupKey", str, int)
+
+
+def _competition_ranks(
+    scores_by_student: Mapping[str, _GroupAccumulator],
+) -> dict[str, int]:
+    """Rank students by actual average, highest first.
+
+    Students with equal averages share a competition rank, so three students
+    with averages 90, 90 and 80 are ranked 1, 1 and 3. Ties are listed by
+    student ID. The returned dictionary is in rank order.
+    """
+    ranked_students = sorted(
+        scores_by_student.items(),
+        key=lambda item: (-item[1].average, item[0]),
+    )
+
+    ranks: dict[str, int] = {}
+    previous_average: float | None = None
+    previous_rank = 0
+
+    for position, (student_id, accumulator) in enumerate(ranked_students, start=1):
+        rank = previous_rank if accumulator.average == previous_average else position
+        ranks[student_id] = rank
+        previous_average = accumulator.average
+        previous_rank = rank
+
+    return ranks
 
 
 def _summarize_student_groups(
@@ -177,6 +219,11 @@ def build_grade_report(
 
     summary: GradeStatistics = calculate_grade_statistics(grades)
     modes = calculate_grade_modes(grades)
+    mode_frequency = sum(grade.score == modes[0] for grade in grades)
+
+    # When no score repeats, every score would tie as a mode; report none.
+    if mode_frequency == 1:
+        modes = []
 
     grade_distribution = create_ordered_grade_report(
         distribution_counts,
@@ -188,6 +235,7 @@ def build_grade_report(
     student_averages = sorted(
         accumulator.average for accumulator in scores_by_student.values()
     )
+    ranks = _competition_ranks(scores_by_student)
 
     student_performance: dict[str, StudentPerformance] = {
         student_id: {
@@ -201,9 +249,20 @@ def build_grade_report(
                 / len(student_averages)
                 * 100
             ),
+            "rank": ranks[student_id],
         }
         for student_id, accumulator in sorted(scores_by_student.items())
     }
+
+    top_performers: list[TopPerformer] = [
+        {
+            "student_id": student_id,
+            "average": scores_by_student[student_id].average,
+            "rank": rank,
+        }
+        for student_id, rank in ranks.items()
+        if rank <= TOP_PERFORMER_LIMIT
+    ]
 
     failing_records = len(grades) - passing_records
     total_records = len(grades)
@@ -259,8 +318,10 @@ def build_grade_report(
     report: GradeReport = {
         "summary": summary,
         "modes": modes,
+        "mode_frequency": mode_frequency,
         "grade_distribution": grade_distribution,
         "student_performance": student_performance,
+        "top_performers": top_performers,
         "semester_trends": semester_trends,
         "dataset_overview": dataset_overview,
         "pass_fail": pass_fail,
@@ -303,6 +364,13 @@ def _build_insights(report: GradeReport) -> list[str]:
             f"have an average at or above {PASSING_SCORE:.0f}%."
         ),
     ]
+
+    leaders = [item for item in report["top_performers"] if item["rank"] == 1]
+    label = "Top performer" if len(leaders) == 1 else "Top performers"
+    insights.append(
+        f"{label}: {', '.join(item['student_id'] for item in leaders)} "
+        f"with a {leaders[0]['average']:.2f}% average."
+    )
 
     largest_count = max(distribution.values())
     most_common_categories = [
@@ -367,17 +435,37 @@ def _build_insights(report: GradeReport) -> list[str]:
     return insights
 
 
+def round_report_values(value: object) -> object:
+    """Return a copy of value with every float rounded for JSON output.
+
+    Dictionaries and lists are copied recursively, other values are returned
+    unchanged. Adding 0.0 turns a rounded negative zero into 0.0.
+    """
+    if isinstance(value, float):
+        return round(value, JSON_DECIMAL_PLACES) + 0.0
+
+    if isinstance(value, dict):
+        return {key: round_report_values(item) for key, item in value.items()}
+
+    if isinstance(value, list):
+        return [round_report_values(item) for item in value]
+
+    return value
+
+
 def write_json_report(
     report: GradeReport,
     file_path: str | Path,
 ) -> None:
     """Write a grade report as readable JSON.
 
-    Parent directories are created when they do not already exist.
+    Floats are rounded to two decimal places in the file only; the report
+    passed in keeps full precision. Parent directories are created when they
+    do not already exist.
     """
     path = Path(file_path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     with path.open("w", encoding="utf-8") as report_file:
-        json.dump(report, report_file, indent=2, allow_nan=False)
+        json.dump(round_report_values(report), report_file, indent=2, allow_nan=False)
         report_file.write("\n")
