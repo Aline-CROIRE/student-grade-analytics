@@ -1,3 +1,7 @@
+"""Collection helpers: Counter counting, defaultdict grouping, ordered
+reports, and a deque-based rolling average.
+"""
+
 from collections import Counter, OrderedDict, defaultdict, deque, namedtuple
 from typing import TypedDict
 

@@ -1,3 +1,5 @@
+"""Interactive command-line entry point for the Student Grade Analytics tool."""
+
 import tkinter as tk
 from collections import defaultdict
 from pathlib import Path

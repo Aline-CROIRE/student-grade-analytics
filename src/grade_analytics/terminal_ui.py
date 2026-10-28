@@ -1,3 +1,5 @@
+"""Terminal dashboard and plain-text report formatting."""
+
 from pathlib import Path
 
 from src.grade_analytics.json_report import GradeReport, GroupPerformance

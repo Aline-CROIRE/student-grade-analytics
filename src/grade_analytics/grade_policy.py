@@ -1,3 +1,5 @@
+"""Pass mark, grade boundaries, and score validation rules."""
+
 from math import isfinite
 
 PASSING_SCORE = 60.0
