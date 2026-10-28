@@ -31,20 +31,20 @@ marks but are not explicit requirements.
 
 | ID | Finding | Requirement | Class | Phase | Status |
 |---|---|---|---|---|---|
-| C1 | README has no JSON report example | Submission: "JSON report examples" | Mandatory | 9 | Open |
+| C1 | README has no JSON report example | Submission: "JSON report examples" | Mandatory | 9 | Resolved |
 | C2 | Plain `pytest` fails because `src` is not importable | Testing & Validation | Recommended | 2 | Resolved |
-| C3 | README CSV example is rejected by the loader (`S1` instead of `YYYY-S1`); semester labels in sample output are wrong; placeholder text; outdated project tree | Submission: "Sample input/output"; Documentation | Mandatory | 9 | Open |
+| C3 | README CSV example is rejected by the loader (`S1` instead of `YYYY-S1`); semester labels in sample output are wrong; placeholder text; outdated project tree | Submission: "Sample input/output"; Documentation | Mandatory | 9 | Resolved |
 | C4 | Uncommitted deletion of a duplicate screenshot (`docs/working screenshoot.png`) | Repository hygiene | Recommended | 1 | Resolved |
-| H1 | No measured comparison of memory usage between collection approaches; performance notes are qualitative only | Memory Efficiency: "Compare memory usage of different collection approaches" | Mandatory | 7 | Open |
+| H1 | No measured comparison of memory usage between collection approaches; performance notes are qualitative only | Memory Efficiency: "Compare memory usage of different collection approaches" | Mandatory | 7 | Resolved |
 | H2 | `deque` is not used to track semester trends; `RollingAverage` is not used by the application | Statistical Processing: "Track grade trends over semesters using deque" | Mandatory | 4 | Resolved |
-| H3 | Grouping students by major/year is only exercised in unit tests; the sample data has no major/year, and `Student`/`Course` are unused by the application | Data Structures: "Use defaultdict for grouping students by major/year" | Mandatory | 5 | Open |
+| H3 | Grouping students by major/year is only exercised in unit tests; the sample data has no major/year, and `Student`/`Course` are unused by the application | Data Structures: "Use defaultdict for grouping students by major/year" | Mandatory | 5 | Resolved (`Course` is still defined but not used by the application) |
 | H4 | No test uses the shipped `data/grades.csv` | Testing & Validation: "sample data tests" | Mandatory | 2 | Resolved |
-| H5 | The application requires the Tkinter file picker; no command-line path option; Tkinter requirement undocumented | Setup instructions | Recommended | 8, 9 | Open |
-| M1 | JSON report has no rank or top-performer data | Description: "insights like top performers"; Milestone: "implement ranking algorithm" | Recommended | 6 | Open |
-| M2 | JSON floats are not rounded (e.g. `7.599999999999994`); `modes` lists every score when none repeat | Final Integration: "JSON formatting" | Recommended | 6 | Open |
+| H5 | The application requires the Tkinter file picker; no command-line path option; Tkinter requirement undocumented | Setup instructions | Recommended | 8, 9 | Partly resolved: Tkinter requirement documented; command-line path skipped (optional) |
+| M1 | JSON report has no rank or top-performer data | Description: "insights like top performers"; Milestone: "implement ranking algorithm" | Recommended | 6 | Resolved |
+| M2 | JSON floats are not rounded (e.g. `7.599999999999994`); `modes` lists every score when none repeat | Final Integration: "JSON formatting" | Recommended | 6 | Resolved |
 | M3 | `build_grade_report` duplicates logic from `analytics.py` and `semester_trends.py`; unused `_grade_category`; two TypedDicts named `GradeReport` | Code Quality & Structure | Recommended | 3 | Resolved |
-| M4 | CSV loader does not use a generator | Memory Efficiency: generators (bonus) | Optional | 7 | Open |
-| M5 | Duplicate CSV rows are accepted silently | Error handling | Optional | 8 | Open |
+| M4 | CSV loader does not use a generator | Memory Efficiency: generators (bonus) | Optional | 7 | Resolved |
+| M5 | Duplicate CSV rows are accepted silently | Error handling | Optional | 8 | Not addressed (optional; Phase 8 skipped) |
 
 ## Remediation phases
 
@@ -57,6 +57,6 @@ marks but are not explicit requirements.
 | 5 | `feat/major-year-grouping` | H3 |
 | 6 | `feat/json-rankings-rounding` | M1, M2 |
 | 7 | `perf/memory-comparison` | H1, M4 |
-| 8 | `feat/cli-path-and-validation` | H5, M5 |
+| 8 | `feat/cli-path-and-validation` | Skipped (optional) |
 | 9 | `docs/readme-compliance` | C1, C3, H5 (documentation) |
 | 10 | Release PR `develop` → `main` | Final verification |

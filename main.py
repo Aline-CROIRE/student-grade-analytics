@@ -3,13 +3,16 @@ from collections import defaultdict
 from pathlib import Path
 from tkinter import filedialog
 
-from src.grade_analytics.csv_loader import load_grades_from_csv
+from src.grade_analytics.csv_loader import (
+    load_grades_from_csv,
+    load_students_from_csv,
+)
 from src.grade_analytics.json_report import (
     GradeReport,
     build_grade_report,
     write_json_report,
 )
-from src.grade_analytics.models import Grade
+from src.grade_analytics.models import Grade, Student
 from src.grade_analytics.semester import semester_sort_key
 from src.grade_analytics.terminal_ui import (
     print_dashboard,
@@ -17,6 +20,8 @@ from src.grade_analytics.terminal_ui import (
     print_workspace_menu,
     write_text_report,
 )
+
+STUDENTS_FILENAME = "students.csv"
 
 
 def choose_input_file() -> Path | None:
@@ -51,6 +56,28 @@ def load_selected_file(path: Path) -> list[Grade] | None:
 
     print(f"\nLoaded {len(grades)} grade records from '{path.name}'.")
     return grades
+
+
+def load_student_profiles(grades_path: Path) -> list[Student] | None:
+    """Load the optional students.csv stored beside the grades file.
+
+    Returns None when the file is absent or invalid, so the analysis can
+    continue without major and year groups.
+    """
+    students_path = grades_path.with_name(STUDENTS_FILENAME)
+
+    if not students_path.is_file():
+        return None
+
+    try:
+        students = load_students_from_csv(students_path)
+    except (OSError, ValueError) as error:
+        print(f"Warning: could not load '{students_path.name}': {error}")
+        print("Continuing without major and year analysis.")
+        return None
+
+    print(f"Loaded {len(students)} student profiles from '{students_path.name}'.")
+    return students
 
 
 def choose_analysis_period(
@@ -97,13 +124,14 @@ def choose_analysis_period(
 def show_dashboard(
     grades: list[Grade],
     period_label: str,
+    students: list[Student] | None = None,
 ) -> GradeReport | None:
     """Generate and display the complete dashboard for a period."""
     if not grades:
         print("No grade records are available for this period.")
         return None
 
-    report = build_grade_report(grades)
+    report = build_grade_report(grades, students)
     print_dashboard(report, period_label)
     return report
 
@@ -185,6 +213,7 @@ def main() -> None:
         return
 
     source_path, grades = selected_file
+    students = load_student_profiles(source_path)
 
     while True:
         selected_period = choose_analysis_period(grades)
@@ -194,7 +223,7 @@ def main() -> None:
             return
 
         period_label, period_grades = selected_period
-        report = show_dashboard(period_grades, period_label)
+        report = show_dashboard(period_grades, period_label, students)
 
         if report is None:
             continue
@@ -214,6 +243,7 @@ def main() -> None:
 
                 if replacement is not None:
                     source_path, grades = replacement
+                    students = load_student_profiles(source_path)
                     break
 
             elif choice == "4":
