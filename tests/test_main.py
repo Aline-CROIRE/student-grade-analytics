@@ -311,3 +311,64 @@ def test_export_json_write_failure_is_reported(
     assert exported is False
     assert "Could not export reports: permission denied" in output
     assert "Reports exported successfully." not in output
+
+
+def test_main_uses_students_csv_beside_grades_file(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    csv_path = write_csv(
+        tmp_path / "grades.csv",
+        "S001,CS101,80,2026-S1\nS002,CS101,60,2026-S1\n",
+    )
+    (tmp_path / "students.csv").write_text(
+        "student_id,name,major,year\nS001,Alice,Computing,2\nS002,Brian,Business,1\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(application, "__file__", str(tmp_path / "main.py"))
+    monkeypatch.setattr(application, "choose_input_file", lambda: csv_path)
+    choices = iter(["1", "1", "", "4"])
+    monkeypatch.setattr(builtins, "input", lambda _prompt: next(choices))
+
+    application.main()
+
+    report_path = tmp_path / "reports" / "grades_entire_dataset_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["major_performance"] == {
+        "Business": {"student_count": 1, "grade_count": 1, "average": 60.0},
+        "Computing": {"student_count": 1, "grade_count": 1, "average": 80.0},
+    }
+    assert list(report["year_performance"]) == ["1", "2"]
+    assert "Loaded 2 student profiles from 'students.csv'." in capsys.readouterr().out
+
+
+def test_load_student_profiles_returns_none_without_students_csv(tmp_path, capsys):
+    assert application.load_student_profiles(tmp_path / "grades.csv") is None
+    assert capsys.readouterr().out == ""
+
+
+def test_invalid_students_csv_warns_and_analysis_continues(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    csv_path = write_csv(tmp_path / "grades.csv", "S001,CS101,80,2026-S1\n")
+    (tmp_path / "students.csv").write_text(
+        "student_id,name,major,year\nS001,Alice,Computing,zero\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(application, "__file__", str(tmp_path / "main.py"))
+    monkeypatch.setattr(application, "choose_input_file", lambda: csv_path)
+    choices = iter(["1", "1", "", "4"])
+    monkeypatch.setattr(builtins, "input", lambda _prompt: next(choices))
+
+    application.main()
+
+    output = capsys.readouterr().out
+    report_path = tmp_path / "reports" / "grades_entire_dataset_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert "Warning: could not load 'students.csv': Invalid year on row 2" in output
+    assert "Continuing without major and year analysis." in output
+    assert report["major_performance"] == {}
+    assert report["summary"]["count"] == 1

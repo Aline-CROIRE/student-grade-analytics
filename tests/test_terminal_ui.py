@@ -1,5 +1,5 @@
 from src.grade_analytics.json_report import build_grade_report
-from src.grade_analytics.models import Grade
+from src.grade_analytics.models import Grade, Student
 from src.grade_analytics.terminal_ui import format_report_text
 
 
@@ -138,3 +138,37 @@ def test_semester_trends_show_rolling_average() -> None:
     assert s2_line.split()[1:3] == ["95.00%", "85.00%"]
     assert "mean of the most recent 2 semester averages" in text
     assert all(len(line) <= 76 for line in (header, s1_line, s2_line))
+
+
+def test_dashboard_shows_performance_by_major_and_year() -> None:
+    grades = [
+        Grade("S001", "CS101", 80.0, "2026-S1"),
+        Grade("S002", "CS101", 70.0, "2026-S1"),
+        Grade("S002", "CS102", 90.0, "2026-S2"),
+    ]
+    students = [
+        Student("S001", "Alice", "Computing", 2),
+        Student("S002", "Brian", "Engineering", 1),
+    ]
+
+    text = format_report_text(build_grade_report(grades, students), "Entire dataset")
+    section = text.split("7. PERFORMANCE BY MAJOR AND YEAR")[1].split("8. ")[0]
+    rows = section.splitlines()
+
+    computing = next(row for row in rows if row.startswith("Computing"))
+    engineering = next(row for row in rows if row.startswith("Engineering"))
+    year_1 = next(row for row in rows if row.startswith("Year 1"))
+
+    assert computing.split()[1:] == ["1", "1", "80.00%"]
+    assert engineering.split()[1:] == ["1", "2", "80.00%"]
+    assert year_1.split()[2:] == ["1", "2", "80.00%"]
+    assert all(len(row) <= 76 for row in rows)
+
+
+def test_dashboard_explains_missing_student_profiles() -> None:
+    text = format_report_text(
+        build_grade_report([Grade("S001", "CS101", 80.0, "2026-S1")]),
+        "Entire dataset",
+    )
+
+    assert "No student profiles were provided" in text
